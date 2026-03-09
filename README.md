@@ -21,20 +21,24 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 
 ## 💻 Instrukcja Uruchomienia
 
-### Sposób 1: Docker (Zalecane - wszystkie systemy)
+### Szybki Start (Docker) 🐳
 
-Wymagany zainstalowany [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Najszybsza metoda uruchomienia całej infrastruktury (Backend + Frontend + Baza Danych).
 
-1. Sklonuj repozytorium:
-   ```bash
-   git clone https://github.com/karmauh/ai_inzy.git
-   cd ai_inzy
-   ```
-2. Uruchom kontenery:
-   ```bash
+1. **Upewnij się, że masz zainstalowany Docker Desktop.**
+2. **Uruchom projekt jedną komendą:**
+   ```powershell
    docker-compose up --build
    ```
-3. Aplikacja dostępna pod adresem: `http://localhost:5173`
+3. **Dostęp do aplikacji:**
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### Sposób 2: Uruchomienie lokalne (Manualne)
+
+Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
 
 ---
 
