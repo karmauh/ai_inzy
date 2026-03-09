@@ -62,11 +62,21 @@ class AnomalyDetector:
             # The prompt says: "visual markers of entry points... generated only for the period covering at most two months back".
             # It strictly implies Entry Points (Buy).
             
+        except Exception:
             # Obsługa błędu przy filtrowaniu dat
             pass
 
+        # Wybór kolumn do zwrócenia (zgodnie ze schematem StockDataPoint)
+        valid_output_cols = [
+            'date', 'open', 'high', 'low', 'close', 'volume', 
+            'returns', 'volatility', 'sma_20', 'sma_50', 
+            'rsi', 'macd', 'macd_signal', 'ema_20', 'ema_50', 
+            'bb_upper', 'bb_lower', 'atr', 'anomaly_score', 'is_anomaly', 'signal'
+        ]
+        available_cols = [c for c in valid_output_cols if c in df.columns]
+        
         # Zastąpienie wartości NaN/Inf dla poprawnej serializacji JSON
-        df_out = df[valid_output_cols].replace([np.inf, -np.inf], np.nan)
+        df_out = df[available_cols].replace([np.inf, -np.inf], np.nan)
         
         # Konwersja formatu daty na tekst przed zwrotem danych
              

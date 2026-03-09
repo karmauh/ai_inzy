@@ -66,7 +66,12 @@ class DataProcessor:
         - ATR (Average True Range)
         """
         # Dzienne stopy zwrotu i zmienność
+        df['returns'] = df['close'].pct_change()
         df['volatility'] = df['close'].rolling(window=20).std()
+        
+        # Średnie kroczące SMA (20 i 50-dniowe)
+        df['sma_20'] = df['close'].rolling(window=20).mean()
+        df['sma_50'] = df['close'].rolling(window=50).mean()
         
         # Wskaźnik siły względnej (RSI 14-dniowy)
         delta = df['close'].diff()

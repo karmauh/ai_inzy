@@ -21,19 +21,26 @@ class MarketDataService:
                 return []
             
             # Resetowanie indeksu dla uzyskania daty jako kolumny i normalizacja nazw
+            df = df.reset_index()
+            df.columns = [c.lower() for c in df.columns]
             
             # Weryfikacja wymaganych kolumn i ich filtrowanie
-            df = df[valid_cols]
+            valid_cols = ['date', 'open', 'high', 'low', 'close', 'volume']
+            df = df[[c for c in valid_cols if c in df.columns]]
             
             # Dodanie wskaźników technicznych przez DataProcessor
             df = DataProcessor.add_technical_indicators(df)
             
             # Formatery dla serializacji JSON (daty i wartości NaN)
+            if 'date' in df.columns:
+                df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+            
             df = df.astype(object).where(pd.notnull(df), None)
             
             return df.to_dict(orient='records')
             
-            # Obsługa błędu pobierania danych
+        except Exception:
+            # Obsługa błędów przy pobieraniu metadanych
             return []
 
     @staticmethod

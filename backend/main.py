@@ -22,4 +22,3 @@ from app.api.market import router as market_router
 app.include_router(upload_router, prefix="/api/v1", tags=["Pobieranie Danych"])
 app.include_router(analysis_router, prefix="/api/v1", tags=["Analiza"])
 app.include_router(market_router, prefix="/api/v1/market", tags=["Dane Rynkowe"])
-```
