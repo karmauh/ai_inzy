@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+torch
+pydantic
+python-multipart
+sqlalchemy
+psycopg2-binary
+requests
+jinja2
+fpdf
+yfinance

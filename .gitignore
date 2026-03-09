@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+*.bak
+*.swp
+
+# Node.js
+node_modules/
+dist/
+dist-ssr
+*.local
+.eslintcache
+
+# Project specific
+backend/.env
+frontend/.env
+postgres_data/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db

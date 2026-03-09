@@ -1,0 +1,6 @@
+'dict' object has no attribute 'contamination'
+Traceback (most recent call last):
+  File "D:\ai_inzy\backend\app\api\analysis.py", line 45, in analyze_data
+    results = AnomalyDetector.detect_isolation_forest(data_dicts, request.contamination)
+                                                                  ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'contamination'
