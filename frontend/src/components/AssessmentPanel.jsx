@@ -17,11 +17,12 @@ const AssessmentPanel = ({ assessment }) => {
     if (recommendation === 'Sell' || recommendation === 'Sprzedaj') recColor = 'bg-red-600';
 
     return (
-        <div className="bg-slate-800 p-6 rounded-lg shadow-lg border-l-4 border-purple-500">
-            <h2 className="text-2xl font-bold mb-4 text-purple-400 flex items-center gap-2">
-                <span>🤖</span> {t('assessment.title')}
-            </h2>
-            
+        <div className="bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700 transition-all hover:border-blue-500/50">
+            <div className="bg-slate-700/50 p-4 border-b border-slate-600 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-100 flex items-center gap-2">
+                    <span className="text-blue-400">📊</span> {t('assessment.title')}
+                </h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-slate-700/50 p-4 rounded-lg text-center">
                     <p className="text-sm text-gray-400 uppercase tracking-wider mb-1">{t('assessment.sentiment')}</p>

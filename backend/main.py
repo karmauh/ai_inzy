@@ -15,10 +15,10 @@ app.add_middleware(
 def read_root():
     return {"message": "StockGuard AI Backend is running"}
 
-from app.api.upload import router as upload_router
 from app.api.analysis import router as analysis_router
+from app.api.export import router as export_router
 from app.api.market import router as market_router
 
-app.include_router(upload_router, prefix="/api/v1", tags=["Pobieranie Danych"])
+app.include_router(export_router, prefix="/api/v1/export", tags=["Eksport Danych"])
 app.include_router(analysis_router, prefix="/api/v1", tags=["Analiza"])
 app.include_router(market_router, prefix="/api/v1/market", tags=["Dane Rynkowe"])

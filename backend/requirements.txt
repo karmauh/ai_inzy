@@ -10,5 +10,5 @@ sqlalchemy
 psycopg2-binary
 requests
 jinja2
-fpdf
+fpdf2
 yfinance
