@@ -6,51 +6,7 @@ from app.models.schemas import StockDataPoint
 from typing import List, Dict, Any
 
 class DataProcessor:
-    @staticmethod
-    async def process_csv_upload(file: UploadFile) -> Dict[str, Any]:
-        if not file.filename.endswith('.csv'):
-            raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file.")
-        
-        try:
-            contents = await file.read()
-            df = pd.read_csv(BytesIO(contents))
-            
-            # Normalizacja nazw kolumn do małych liter
-            df.columns = df.columns.str.lower()
-            
-            # Sprawdzenie wymaganych kolumn
-            required_columns = {'date', 'open', 'high', 'low', 'close', 'volume'}
-            if not required_columns.issubset(df.columns):
-                missing = required_columns - set(df.columns)
-                raise HTTPException(status_code=400, detail=f"Missing required columns: {missing}")
-            
-            # Konwersja daty na obiekt datetime i sortowanie
-            
-            # Podstawowe informacje o danych
-            total_rows = len(df)
-            start_date = df['date'].min().strftime('%Y-%m-%d')
-            end_date = df['date'].max().strftime('%Y-%m-%d')
-            
-            # Obliczanie wskaźników technicznych
-            df = DataProcessor.add_technical_indicators(df)
-            
-            # Tworzenie podglądu (pierwsze 5 wierszy) z obsługą wartości pustych dla JSON
-            df_preview = df.head(5).astype(object).where(pd.notnull(df.head(5)), None)
-            preview_data = df_preview.to_dict(orient='records')
-            
-            return {
-                "filename": file.filename,
-                "total_rows": total_rows,
-                "daterange_start": start_date,
-                "daterange_end": end_date,
-                "preview": preview_data,
-                "message": "File processed successfully with technical indicators"
-            }
-            
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
-
-        return df
+    
     
     @staticmethod
     def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:

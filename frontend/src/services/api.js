@@ -9,17 +9,37 @@ const scale = axios.create({
     },
 });
 
-export const uploadCSV = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // Wysłanie pliku CSV do backendu
-    const response = await scale.post('/upload', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+// Eksport danych do CSV
+export const exportCSV = async (data) => {
+    const response = await axios.post(`${API_URL}/export/csv`, data, {
+        responseType: 'blob'
     });
-    return response.data;
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'stock_data.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link); // Clean up the DOM
+};
+
+// Eksport raportu do PDF
+export const exportPDF = async (data, assessment, tickerInfo, language) => {
+    const response = await axios.post(`${API_URL}/export/pdf`, {
+        data,
+        assessment,
+        ticker_info: tickerInfo,
+        language
+    }, {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'analysis_report.pdf');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link); // Clean up the DOM
 };
 
 export const analyzeData = async (data, modelType = 'isolation_forest', contamination = 0.05, tickerInfo = null, language = 'pl') => {

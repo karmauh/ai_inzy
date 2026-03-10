@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import FileUpload from '../components/FileUpload';
 import StockChart from '../components/StockChart';
 import TechnicalCharts from '../components/TechnicalCharts';
 import TickerSearch from '../components/TickerSearch';
 import AssessmentPanel from '../components/AssessmentPanel';
-import { analyzeData, fetchMarketData } from '../services/api';
+import { analyzeData, fetchMarketData, exportCSV, exportPDF } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
 const Dashboard = () => {
@@ -15,32 +14,32 @@ const Dashboard = () => {
 
     // Ponowna analiza po zmianie języka (jeśli dane są załadowane)
     useEffect(() => {
-        if (analysisResults && (tickerInfo || processedData)) {
+        if (analysisResults && tickerInfo) {
             runAnalysis();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [language]);
 
     // Stan danych i wyników analizy
-    const [processedData, setProcessedData] = useState(null); // From CSV Upload
     const [analysisResults, setAnalysisResults] = useState(null);
     const [assessment, setAssessment] = useState(null);
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
-    // Funkcje obsługi zdarzeń (Handlery)
-    const handleUploadSuccess = (data) => {
-        console.log("Upload result:", data);
-        setProcessedData(data);
-        setAnalysisResults(null); 
-        setAssessment(null);
-        setTickerInfo(null); // Clear ticker info on CSV upload
+    // Obsługa eksportu
+    const handleExportCSV = () => {
+        if (analysisResults) exportCSV(analysisResults);
+    };
+
+    const handleExportPDF = () => {
+        if (analysisResults && assessment && tickerInfo) {
+            exportPDF(analysisResults, assessment, tickerInfo, language);
+        }
     };
 
     const handleSearch = async (symbol) => {
         setSearchLoading(true);
         setAnalysisResults(null);
         setAssessment(null);
-        setProcessedData(null);
         setTickerInfo(null);
         
         try {
@@ -59,8 +58,8 @@ const Dashboard = () => {
     };
 
     const runAnalysis = async (dataPoints = null, tickerInfoOverride = null) => {
-        // Określenie źródła danych: przekazany argument lub podgląd z CSV
-        const points = dataPoints || (processedData && processedData.preview);
+        // Określenie źródła danych: przekazany argument lub aktualne wyniki analizy
+        const points = dataPoints || analysisResults;
         const info = tickerInfoOverride || tickerInfo;
 
         if (!points) return;
@@ -89,69 +88,83 @@ const Dashboard = () => {
                 <p className="text-gray-400">Advanced Anomaly Detection & AI Interpretation</p>
             </header>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                {/* Lewa kolumna: Metody wprowadzania danych */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                {/* Kolumna: Wyszukiwanie i Akcje */}
                 <div className="space-y-6">
-                     <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
-                        <h2 className="text-xl font-bold mb-4 text-purple-400">{t('dashboard.searchButton')}</h2>
-                        <TickerSearch onSearch={handleSearch} loading={searchLoading} />
-                        
-                        <div className="relative flex py-2 items-center">
-                            <div className="flex-grow border-t border-gray-600"></div>
-                            <span className="flex-shrink-0 mx-4 text-gray-400 font-medium">{t('dashboard.or')}</span>
-                            <div className="flex-grow border-t border-gray-600"></div>
+                    <div className="bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700/50 flex flex-col h-full">
+                        <div className="mb-6 border-b border-slate-700/50 pb-4">
+                            <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                                {t('dashboard.searchButton')}
+                            </h2>
                         </div>
-
-                        <h2 className="text-xl font-bold mb-4 text-blue-400">{t('dashboard.uploadTitle')}</h2>
-                        <FileUpload onUploadSuccess={handleUploadSuccess} />
+                        
+                        <div className="flex-1">
+                            <TickerSearch onSearch={handleSearch} loading={searchLoading} />
+                        </div>
+                        
+                        {analysisResults && (
+                            <div className="mt-8 pt-6 border-t border-slate-700/50">
+                                <h2 className="text-sm font-semibold mb-4 text-gray-400 uppercase tracking-wider">{t('dashboard.downloadReport')}</h2>
+                                <div className="grid grid-cols-1 gap-3">
+                                    <button 
+                                        onClick={handleExportPDF}
+                                        className="w-full bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-900/50 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 group shadow-sm"
+                                    >
+                                        <span className="text-lg group-hover:scale-110 transition-transform">📄</span> {t('dashboard.exportPDF')}
+                                    </button>
+                                    <button 
+                                        onClick={handleExportCSV}
+                                        className="w-full bg-green-600/10 hover:bg-green-600/20 text-green-500 border border-green-900/50 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 group shadow-sm"
+                                    >
+                                        <span className="text-lg group-hover:scale-110 transition-transform">📊</span> {t('dashboard.exportCSV')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Prawa kolumna: Kontekst i informacje */}
-                 <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-xl font-bold mb-4 text-gray-300">Analysis Context</h2>
+                {/* Kolumna: Kontekst i informacje */}
+                 <div className="lg:col-span-2 bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700/50 flex flex-col h-full">
+                    <div className="mb-6 border-b border-slate-700/50 pb-4">
+                        <h2 className="text-xl font-bold text-gray-100">Analysis Context</h2>
+                    </div>
                     
-                    {tickerInfo && (
-                        <div className="mb-4 p-4 bg-slate-700/50 rounded border border-slate-600">
-                            <h3 className="text-lg font-bold text-blue-300">{tickerInfo.name} ({tickerInfo.symbol})</h3>
-                            <p className="text-sm text-gray-400">{tickerInfo.sector} - {tickerInfo.industry}</p>
-                            {/* Display full description logic with toggle could be added, but for now full description as requested */}
-                            <p className="mt-2 text-gray-300 text-sm leading-relaxed max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-500 pr-2">
-                                {tickerInfo.description}
-                            </p>
-                        </div>
-                    )}
-
-                    {processedData && !tickerInfo && (
-                        <div className="mb-4">
-                            <p className="text-green-400 font-semibold">{t('dashboard.customFile')}</p>
-                            <p className="text-gray-300">{t('dashboard.filename')}: {processedData.filename}</p>
-                            <p className="text-gray-300">{t('dashboard.rows')}: {processedData.total_rows}</p>
-                        </div>
-                    )}
-                    
-                    {!processedData && !tickerInfo && !searchLoading && (
-                        <div className="flex items-center justify-center h-32 text-gray-500 italic border-2 border-dashed border-gray-700 rounded">
-                            {t('dashboard.selectPrompt')}
-                        </div>
-                    )}
-
-                    {/* Ręczne wyzwolenie analizy dla danych z CSV */}
-                    {processedData && !tickerInfo && (
-                        <button 
-                            onClick={() => runAnalysis()}
-                            disabled={loadingAnalysis}
-                            className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors"
-                        >
-                            {loadingAnalysis ? t('dashboard.runningAnalysis') : t('dashboard.manualTrigger')}
-                        </button>
-                    )}
-                    
-                    {loadingAnalysis && (
-                        <div className="mt-4 p-3 bg-blue-900/20 text-blue-400 rounded text-center animate-pulse">
-                            {t('dashboard.processing')}
-                        </div>
-                    )}
+                    <div className="flex-1">
+                        {tickerInfo ? (
+                            <div className="h-full">
+                                <div className="p-5 bg-slate-900/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
+                                        <div>
+                                            <h3 className="text-2xl font-black text-blue-400 leading-none mb-1">{tickerInfo.symbol}</h3>
+                                            <p className="text-base font-semibold text-gray-200">{tickerInfo.name}</p>
+                                        </div>
+                                        <div className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/20 uppercase">
+                                            {tickerInfo.sector}
+                                        </div>
+                                    </div>
+                                    <div className="h-px bg-slate-700/50 w-full mb-4" />
+                                    <p className="text-gray-300 text-sm leading-relaxed max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent pr-3 font-light">
+                                        {tickerInfo.description}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            !searchLoading && (
+                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500 italic border-2 border-dashed border-slate-700/50 rounded-xl bg-slate-900/20 p-8 text-center gap-4">
+                                    <div className="text-4xl opacity-20">🔎</div>
+                                    <p className="max-w-xs">{t('dashboard.selectPrompt')}</p>
+                                </div>
+                            )
+                        )}
+                        
+                        {loadingAnalysis && (
+                            <div className="mt-4 p-5 bg-blue-600/10 text-blue-400 rounded-xl text-center animate-pulse border border-blue-500/20 flex items-center justify-center gap-3">
+                                <div className="animate-bounce">🚀</div>
+                                <span className="font-semibold tracking-wide"> {t('dashboard.processing')}</span>
+                            </div>
+                        )}
+                    </div>
                  </div>
             </div>
 
