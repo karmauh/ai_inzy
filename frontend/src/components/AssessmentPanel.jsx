@@ -16,6 +16,28 @@ const AssessmentPanel = ({ assessment }) => {
     if (recommendation === 'Buy' || recommendation === 'Kupuj') recColor = 'bg-green-600';
     if (recommendation === 'Sell' || recommendation === 'Sprzedaj') recColor = 'bg-red-600';
 
+    const renderSummary = (text) => {
+        if (!text) return null;
+        
+        // Split by newlines into paragraphs
+        const paragraphs = text.split(/\n+/).filter(p => p.trim() !== '');
+        
+        return paragraphs.map((paragraph, index) => {
+            // regex capturing group splits and keeps the **bold** tokens
+            const parts = paragraph.split(/(\*\*.*?\*\*)/g);
+            return (
+                <p key={index} className="mb-3 last:mb-0 text-gray-300 leading-relaxed font-light">
+                    {parts.map((part, i) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                            return <strong key={i} className="text-blue-300 font-semibold">{part.slice(2, -2)}</strong>;
+                        }
+                        return <span key={i}>{part}</span>;
+                    })}
+                </p>
+            );
+        });
+    };
+
     return (
         <div className="bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700 transition-all hover:border-blue-500/50">
             <div className="bg-slate-700/50 p-4 border-b border-slate-600 flex justify-between items-center">
@@ -43,8 +65,10 @@ const AssessmentPanel = ({ assessment }) => {
             </div>
 
             <div className="bg-slate-700/30 p-4 rounded-lg">
-                <h4 className="text-gray-500 text-xs uppercase mb-2">{t('assessment.summary')}</h4>
-                <p className="text-gray-300 italic leading-relaxed">"{summary}"</p>
+                <h4 className="text-gray-500 text-xs uppercase mb-3">{t('assessment.summary')}</h4>
+                <div className="text-gray-300 text-sm">
+                    {renderSummary(summary)}
+                </div>
             </div>
         </div>
     );

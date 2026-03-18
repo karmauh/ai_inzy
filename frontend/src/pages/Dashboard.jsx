@@ -144,10 +144,10 @@ const Dashboard = () => {
                         <h2 className="text-xl font-bold text-gray-100">Analysis Context</h2>
                     </div>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 flex flex-col">
                         {tickerInfo ? (
-                            <div className="h-full">
-                                <div className="p-5 bg-slate-900/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                            <div className="flex-1 flex flex-col">
+                                <div className="p-5 bg-slate-900/50 rounded-xl border border-slate-700/50 backdrop-blur-sm h-full shadow-inner">
                                     <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-4">
                                         <div>
                                             <h3 className="text-2xl font-black text-blue-400 leading-none mb-1">{tickerInfo.symbol}</h3>
@@ -165,7 +165,7 @@ const Dashboard = () => {
                             </div>
                         ) : (
                             !searchLoading && (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500 italic border-2 border-dashed border-slate-700/50 rounded-xl bg-slate-900/20 p-8 text-center gap-4">
+                                <div className="flex flex-col items-center justify-center flex-1 min-h-[200px] text-gray-500 italic border-2 border-dashed border-slate-700/50 rounded-xl bg-slate-900/20 p-8 text-center gap-4">
                                     <div className="text-4xl opacity-20">🔎</div>
                                     <p className="max-w-xs">{t('dashboard.selectPrompt')}</p>
                                 </div>
@@ -173,9 +173,9 @@ const Dashboard = () => {
                         )}
                         
                         {loadingAnalysis && (
-                            <div className="mt-4 p-5 bg-blue-600/10 text-blue-400 rounded-xl text-center animate-pulse border border-blue-500/20 flex items-center justify-center gap-3">
-                                <div className="animate-bounce">🚀</div>
-                                <span className="font-semibold tracking-wide"> {t('dashboard.processing')}</span>
+                            <div className="mt-6 p-4 bg-blue-600/10 text-blue-400 rounded-xl text-center animate-pulse border border-blue-500/20 flex items-center justify-center gap-3 shadow-lg backdrop-blur-sm">
+                                <div className="animate-bounce text-xl">🚀</div>
+                                <span className="font-semibold tracking-wide text-sm">{t('dashboard.processing')}</span>
                             </div>
                         )}
                     </div>
