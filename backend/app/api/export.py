@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Response, Body
 from typing import List, Dict, Any
 from app.services.export_service import ExportService
-import io
 
 router = APIRouter()
 

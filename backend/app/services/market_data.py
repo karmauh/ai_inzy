@@ -1,8 +1,9 @@
 from app.services.data_processor import DataProcessor
-import numpy as np
 import yfinance as yf
 import pandas as pd
 from typing import List, Dict, Any
+import io
+import contextlib
 
 class MarketDataService:
     @staticmethod
@@ -11,11 +12,10 @@ class MarketDataService:
         Pobiera dane historyczne dla danego tickera (akcje lub krypto).
         """
         try:
-            # Obiekt tickera yfinance
-            stock = yf.Ticker(ticker)
-            
-            # Pobieranie historii notowań
-            df = stock.history(period=period, interval=interval)
+            # Obiekt tickera yfinance i pobranie z wyciszeniem wyjścia
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                stock = yf.Ticker(ticker)
+                df = stock.history(period=period, interval=interval)
             
             if df.empty:
                 return []
@@ -49,8 +49,9 @@ class MarketDataService:
         Pobiera podstawowe informacje o aktywie i kluczowe statystyki.
         """
         try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                stock = yf.Ticker(ticker)
+                info = stock.info
             
             # Ekstrakcja kluczowych wskaźników mikro/makro ekonomicznych
             return {

@@ -2,7 +2,6 @@ import pandas as pd
 from fpdf import FPDF
 import io
 from typing import List, Dict, Any
-import datetime
 import os
 
 class ExportService:
@@ -21,26 +20,33 @@ class ExportService:
         """
         pdf = FPDF()
         
-        # Ścieżki do czcionek DejaVu w systemie Linux (zainstalowane przez fonts-dejavu-core)
-        font_path = "/usr/share/fonts/truetype/dejavu/"
-        font_regular = os.path.join(font_path, "DejaVuSans.ttf")
-        font_bold = os.path.join(font_path, "DejaVuSans-Bold.ttf")
-        font_oblique = os.path.join(font_path, "DejaVuSans-Oblique.ttf")
+        # Ścieżki do czcionek
+        linux_font_path = "/usr/share/fonts/truetype/dejavu/"
+        win_font_path = "C:\\Windows\\Fonts\\"
+        
+        if os.path.exists(os.path.join(win_font_path, "arial.ttf")):
+            font_regular = os.path.join(win_font_path, "arial.ttf")
+            font_bold = os.path.join(win_font_path, "arialbd.ttf")
+            font_oblique = os.path.join(win_font_path, "ariali.ttf")
+            main_font = 'Arial'
+        else:
+            font_regular = os.path.join(linux_font_path, "DejaVuSans.ttf")
+            font_bold = os.path.join(linux_font_path, "DejaVuSans-Bold.ttf")
+            font_oblique = os.path.join(linux_font_path, "DejaVuSans-Oblique.ttf")
+            main_font = 'DejaVu'
 
         # Dodanie czcionek Unicode
         if os.path.exists(font_regular):
-            pdf.add_font('DejaVu', '', font_regular)
-            main_font = 'DejaVu'
-            # Dodaj pozostałe warianty tylko jeśli istnieją, w przeciwnym razie użyj regularnego jako fallback
+            pdf.add_font(main_font, '', font_regular, uni=True)
             if os.path.exists(font_bold):
-                pdf.add_font('DejaVu', 'B', font_bold)
+                pdf.add_font(main_font, 'B', font_bold, uni=True)
             else:
-                pdf.add_font('DejaVu', 'B', font_regular)
+                pdf.add_font(main_font, 'B', font_regular, uni=True)
                 
             if os.path.exists(font_oblique):
-                pdf.add_font('DejaVu', 'I', font_oblique)
+                pdf.add_font(main_font, 'I', font_oblique, uni=True)
             else:
-                pdf.add_font('DejaVu', 'I', font_regular)
+                pdf.add_font(main_font, 'I', font_regular, uni=True)
         else:
             # Fallback do Helvetica (standardowa czcionka PDF)
             main_font = 'Helvetica'
@@ -114,5 +120,5 @@ class ExportService:
             pdf.cell(col_width, 8, str(row.get('signal', 'Hold')), border=1)
             pdf.ln()
             
-        # fpdf2: output() zwraca bajty r raportu jeśli nie podano nazwy pliku
-        return bytes(pdf.output())
+        # fpdf2: output() zwraca bajty raportu jeśli nie podano nazwy pliku
+        return pdf.output(dest='S').encode('latin-1')

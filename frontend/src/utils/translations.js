@@ -10,6 +10,8 @@ export const translations = {
       downloadReport: "Pobierz Wyniki",
       processing: "Przetwarzanie danych rynkowych i generowanie wniosków...",
       selectPrompt: "Wyszukaj ticker, aby rozpocząć analizę.",
+      notFound: "Nie znaleziono danych dla symbolu",
+      error: "Wystąpił błąd",
     },
     charts: {
       priceTitle: "Historia Cen i Sygnały AI",
@@ -46,6 +48,8 @@ export const translations = {
       downloadReport: "Download Results",
       processing: "Processing Market Data & Generating Insights...",
       selectPrompt: "Search for a ticker to begin analysis.",
+      notFound: "No data found for symbol",
+      error: "An error occurred",
     },
     charts: {
       priceTitle: "Price History & AI Signals",
