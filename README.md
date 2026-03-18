@@ -14,7 +14,7 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 
 - **Backend**: FastAPI (Python 3.10)
 - **Frontend**: React + Vite (Tailwind CSS, Recharts)
-- **ML/AI**: Scikit-Learn, OpenAI/LLM Integration
+- **ML/AI**: Scikit-Learn (Isolation Forest), Google Gemini AI (Google AI Studio)
 - **Infrastruktura**: Docker, PostgreSQL
 
 ---
@@ -25,8 +25,12 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 
 Najszybsza metoda uruchomienia całej infrastruktury (Backend + Frontend + Baza Danych).
 
-1. **Upewnij się, że masz zainstalowany Docker Desktop.**
-2. **Uruchom projekt jedną komendą:**
+1. **Utwórz plik `.env`** w katalogu `/backend/` z kluczem API:
+   ```env
+   GEMINI_API_KEY="twój_google_ai_studio_api_key_tutaj"
+   ```
+2. **Upewnij się, że masz zainstalowany Docker Desktop.**
+3. **Uruchom projekt jedną komendą:**
    ```powershell
    docker-compose up --build
    ```
@@ -46,7 +50,10 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
 
 #### Windows
 
-1. **Backend**:
+1. **Konfiguracja klucza API**:
+   - Utwórz plik `backend/.env` i dodaj linię: `GEMINI_API_KEY=\"twój_klucz_tutaj\"`
+
+2. **Backend**:
    ```powershell
    python -m venv venv
    .\venv\Scripts\activate
@@ -63,7 +70,10 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
 
 #### Linux / macOS
 
-1. **Backend**:
+1. **Konfiguracja klucza API**:
+   - Utwórz plik `backend/.env` i dodaj linię: `GEMINI_API_KEY=\"twój_klucz_tutaj\"`
+
+2. **Backend**:
    ```bash
    python3 -m venv venv
    source venv/bin/activate
