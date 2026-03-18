@@ -1,155 +1,160 @@
 from typing import List, Dict, Any
+import os
+import requests
+import json
+import re
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class LLMService:
     @staticmethod
     def generate_assessment(data: List[Dict[str, Any]], anomalies: List[Dict[str, Any]], ticker_info: Dict[str, Any] = None, language: str = 'pl') -> Dict[str, Any]:
         """
-        Generuje syntetyczną ocenę i interpretację wyników analizy.
-        Obsługuje języki 'pl' (polski) i 'en' (angielski).
+        Generuje ocenę i interpretację wyników analizy używając modelu LLM (Google Gemini).
         """
-        
-        # Mapowanie tekstów lokalizowanych
-        lang_map = {
-            'pl': {
-                'neutral': 'Neutralny', 'hold': 'Trzymaj', 'buy': 'Kupuj', 'sell': 'Sprzedaj', 
-                'bullish': 'Byczy', 'bearish': 'Niedźwiedzi', 'slight_bull': 'Lekko Byczy', 'slight_bear': 'Lekko Niedźwiedzi',
-                'no_data': 'Brak danych do analizy.', 'low_conf': 'Niska', 'med_conf': 'Średnia', 'high_conf': 'Wysoka',
-                'uptrend': 'trendzie wzrostowym', 'downtrend': 'trendzie spadkowym', 'neutral_trend': 'trendzie bocznym',
-                'momentum_building': 'rośnie (Bycze)', 'momentum_weakening': 'słabnie (Niedźwiedzie)', 'momentum_dying': 'zanika',
-                'overbought': 'Wykupiony', 'oversold': 'Wyprzedany', 'rsi_neutral': 'Neutralny',
-                'testing_res': 'testuje opór (Górna Wstęga)', 'testing_supp': 'testuje wsparcie (Dolna Wstęga)',
-                'anomaly_detected': 'Ostatni ruch oznaczony jako anomalia, wskazująca na ekstremalną zmienność.',
-                'volatility_normal': 'Zmienność rynku w normie.',
-                'market_overview': 'Przegląd Rynku', 'tech_analysis': 'Analiza Techniczna', 'anomaly_check': 'Sprawdzenie Anomalii', 'conclusion': 'Wniosek',
-                'overview_template': "{name} ({symbol}) działa w sektorze {sector}. {fund_text}Aktywo znajduje się obecnie w {trend_desc} względem 50-dniowej Średniej Wykładniczej.",
-                'tech_template': "Momentum obecnie {momentum_desc}. Wskaźnik RSI wynosi {rsi:.1f}, co klasyfikuje aktywo jako {rsi_desc}. Jeśli chodzi o akcję cenową, aktywo {bb_desc}.",
-                'vol_template': "{anomaly_text} ATR wskazuje poziom zmienności {atr:.2f}.",
-                'concl_template': "Biorąc pod uwagę momentum i strukturę rynku, krótkoterminowa perspektywa jest {sentiment}. Model sugeruje strategię typu {recommendation}.",
-                'pe_text': "Przy wskaźniku P/E równym {pe:.2f}, ",
-                'unknown_asset': 'Nieznane Aktywo', 'unknown_sector': 'Nieznany Sektor'
-            },
-            'en': {
-                'neutral': 'Neutral', 'hold': 'Hold', 'buy': 'Buy', 'sell': 'Sell',
-                'bullish': 'Bullish', 'bearish': 'Bearish', 'slight_bull': 'Slightly Bullish', 'slight_bear': 'Slightly Bearish',
-                'no_data': 'No data available for analysis.', 'low_conf': 'Low', 'med_conf': 'Medium', 'high_conf': 'High',
-                'uptrend': 'Uptrend', 'downtrend': 'Downtrend', 'neutral_trend': 'Sideways Trend',
-                'momentum_building': 'building up (Bullish)', 'momentum_weakening': 'weakening (Bearish)', 'momentum_dying': 'dying out',
-                'overbought': 'Overbought', 'oversold': 'Oversold', 'rsi_neutral': 'Neutral',
-                'testing_res': 'testing resistance (Upper Band)', 'testing_supp': 'testing support (Lower Band)',
-                'anomaly_detected': 'The latest movement is flagged as anomalous, indicating extreme volatility.',
-                'volatility_normal': 'Market volatility is within expected parameters.',
-                'market_overview': 'Market Overview', 'tech_analysis': 'Technical Analysis', 'anomaly_check': 'Anomaly Check', 'conclusion': 'Conclusion',
-                'overview_template': "{name} ({symbol}) operates in the {sector} sector. {fund_text}The asset is currently demonstrating a {trend_desc} relative to its 50-day Exponential Moving Average.",
-                'tech_template': "Momentum is currently {momentum_desc}. The Relative Strength Index (RSI) is at {rsi:.1f}, which classifies the asset as {rsi_desc}. Regarding price action, the asset is {bb_desc}.",
-                'vol_template': "{anomaly_text} The Average True Range (ATR) indicates a volatility level of {atr:.2f}.",
-                'concl_template': "Taking into account both the technical momentum and the current market structure, the immediate outlook is {sentiment}. The model recommends a {recommendation} strategy.",
-                'pe_text': "Trading at a P/E ratio of {pe:.2f}, ",
-                'unknown_asset': 'Unknown Asset', 'unknown_sector': 'Unknown Sector'
-            }
-        }
-        
-        # Wybór słownika na podstawie języka
-        L = lang_map.get(language, lang_map['pl'])
-
         if not anomalies:
             return {
-                "sentiment": L['neutral'],
-                "recommendation": L['hold'],
-                "summary": L['no_data'],
-                "confidence": L['low_conf']
+                "sentiment": "Neutral",
+                "recommendation": "Hold",
+                "summary": "No data available." if language == 'en' else "Brak danych do analizy.",
+                "confidence": "Low"
             }
             
-        # Pobranie ostatniego punktu danych do analizy bieżącej (sentyment)
         last_point = anomalies[-1]
         
-        # Wyciągnięcie wskaźników technicznych do syntezy
-        close_price = last_point.get('close')
-        rsi = last_point.get('rsi')
-        macd = last_point.get('macd')
-        macd_signal = last_point.get('macd_signal')
-        ema_50 = last_point.get('ema_50')
-        bb_upper = last_point.get('bb_upper')
-        bb_lower = last_point.get('bb_lower')
+        ticker_str = f"Ticker: {ticker_info.get('symbol', 'N/A')} ({ticker_info.get('name', 'N/A')})" if ticker_info else "Ticker: Nieznany"
         
-        # 1. Określenie trendu (Średnia EMA i cena)
-        trend_score = 0
-        trend_desc = L['neutral_trend']
-        
-        if ema_50 and close_price:
-            if close_price > ema_50:
-                trend_score += 1
-                trend_desc = L['uptrend']
-            else:
-                trend_score -= 1
-                trend_desc = L['downtrend']
-                
-        # 2. Momentum (Wskaźnik MACD)
-        momentum_desc = L['momentum_dying']
-        if macd is not None and macd_signal is not None:
-            if macd > macd_signal:
-                trend_score += 1
-                momentum_desc = L['momentum_building']
-            else:
-                trend_score -= 1
-                momentum_desc = L['momentum_weakening']
-                
-        # 3. Oscylatory (Wskaźnik RSI)
-        rsi_desc = L['rsi_neutral']
-        if rsi is not None:
-            if rsi > 70:
-                trend_score -= 1 
-                rsi_desc = f"{L['overbought']} ({rsi:.2f})"
-            elif rsi < 30:
-                trend_score += 1
-                rsi_desc = f"{L['oversold']} ({rsi:.2f})"
-            else:
-                rsi_desc = f"{L['rsi_neutral']} ({rsi:.2f})"
+        # Pobieranie parametryzacji
+        def fmt(val):
+            return f"{val:.2f}" if isinstance(val, (int, float)) else str(val)
 
-        # 4. Zmienność (Wstęgi Bollingera)
-        bb_desc = "within normal range" if language == 'en' else "w normie"
-        if bb_upper and bb_lower and close_price:
-            if close_price >= bb_upper * 0.99:
-                bb_desc = L['testing_res']
-            elif close_price <= bb_lower * 1.01:
-                bb_desc = L['testing_supp']
-                
-        # Synteza końcowa oceny i rekomendacji
-        if trend_score >= 2:
-            sentiment = L['bullish']
-            recommendation = L['buy']
-        elif trend_score <= -2:
-            sentiment = L['bearish']
-            recommendation = L['sell']
-        else:
-            sentiment = L['neutral']
-            recommendation = L['hold']
-            
-        # Kontekst anomalii
+        close = fmt(last_point.get('close', 'N/A'))
+        rsi = fmt(last_point.get('rsi', 'N/A'))
+        macd = fmt(last_point.get('macd', 'N/A'))
+        macd_signal = fmt(last_point.get('macd_signal', 'N/A'))
+        ema_20 = fmt(last_point.get('ema_20', 'N/A'))
+        ema_50 = fmt(last_point.get('ema_50', 'N/A'))
+        atr = fmt(last_point.get('atr', 'N/A'))
+        bb_upper = fmt(last_point.get('bb_upper', 'N/A'))
+        bb_lower = fmt(last_point.get('bb_lower', 'N/A'))
         is_anomaly = last_point.get('is_anomaly', False)
-        anomaly_text = L['anomaly_detected'] if is_anomaly else L['volatility_normal']
+        
+        lang_instruction = "angielskim" if language == "en" else "polskim"
 
-        # Kontekst spółki i fundamenty (P/E)
-        symbol = ticker_info.get('symbol', L['unknown_asset']) if ticker_info else L['unknown_asset']
-        name = ticker_info.get('name', '') if ticker_info else ''
-        sector = ticker_info.get('sector', L['unknown_sector']) if ticker_info else L['unknown_sector']
-        pe_ratio = ticker_info.get('peRatio')
-        
-        # Kontekst wskaźników fundamentalnych
-        fund_text = ""
-        if pe_ratio:
-            fund_text = L['pe_text'].format(pe=pe_ratio)
-            
-        # Konstruowanie narracji tekstowej podsumowania
-        summary_lines = [
-            f"{L['market_overview']}: " + L['overview_template'].format(name=name, symbol=symbol, sector=sector, fund_text=fund_text, trend_desc=trend_desc),
-            f"{L['tech_analysis']}: " + L['tech_template'].format(momentum_desc=momentum_desc, rsi=rsi, rsi_desc=rsi_desc, bb_desc=bb_desc),
-            f"{L['anomaly_check']}: " + L['vol_template'].format(anomaly_text=anomaly_text, atr=last_point.get('atr', 0)),
-            f"{L['conclusion']}: " + L['concl_template'].format(sentiment=sentiment, recommendation=recommendation)
-        ]
-        
-        return {
-            "sentiment": sentiment,
-            "recommendation": recommendation,
-            "summary": " ".join(summary_lines),
-            "confidence": L['high_conf'] if abs(trend_score) >= 2 else L['med_conf']
+        # Główny prompt przekazany przez użytkownika
+        system_prompt = f"""
+Jesteś asystentem-analitykiem rynków finansowych w aplikacji StockGuard AI.
+Otrzymujesz przetworzone dane techniczne dla jednego instrumentu (akcja, ETF lub indeks): ceny, wskaźniki techniczne (RSI, MACD, Bollinger Bands, EMA, ATR), informację o anomaliach oraz podstawowe metadane (ticker, interwał, zakres dat).
+Twoim zadaniem jest:
+
+- Krótko podsumować aktualną sytuację rynkową instrumentu.
+- Zinterpretować wskaźniki techniczne (co oznacza poziom RSI, sygnały MACD, wybicia poza wstęgi Bollingera, zmienność z ATR, kierunek trendu na podstawie EMA).
+- Wspomnieć o wykrytych anomaliach (np. nietypowe wolumeny, gwałtowne ruchy cenowe) i co mogą sugerować.
+- Na końcu sformułować prostą rekomendację w formacie: Rekomendacja: [Kupuj / Trzymaj / Sprzedaj] wraz z 2–3 zdaniami uzasadnienia.
+
+Zasady:
+- Pisz formatując kluczowe słowa w tekście (używaj znaczników Markdown `**pogrubienie**` do wyróżniania mniejszych pojęć zamiast kropek).
+- Przejrzyście podziel odpowiedź dokładnie na 2 do 3 akapitów, nie twórz jednolitej ściany tekstu.
+- Używaj prostego języka, ale z poprawną terminologią techniczną.
+- Nie podawaj konkretnych cen docelowych ani gwarancji wyniku.
+- Jeśli dane są sprzeczne lub niejednoznaczne, wyraźnie to zaznacz i wybierz bardziej zachowawczą rekomendację.
+- Jeśli brakuje jakiegoś wskaźnika, powiedz „brak danych” zamiast zgadywać.
+- Odpowiadaj w języku {lang_instruction}, ale nazwy wskaźników (RSI, MACD, itp.) zostaw w oryginale.
+
+KONIECZNIE NA SAMYM KOŃCU SWOJEJ ODPOWIEDZI WYGENERUJ ODDZIELNĄ SEKCJE W FORMACIE JSON (aby system mógł ją łatwo parsować do interfejsu TheDashboard):
+```json
+{{
+  "sentiment": "Byczy / Niedźwiedzi / Neutralny" (lub odpowiednik w EN jeśli język to EN),
+  "recommendation": "Kupuj / Trzymaj / Sprzedaj" (lub Buy / Hold / Sell jeśli EN),
+  "confidence": "Wysoka / Średnia / Niska" (lub High / Medium / Low jeśli EN)
+}}
+```
+
+Dane techniczne rynkowe:
+-------------------------
+{ticker_str}
+Ostatnia cena zamknięcia: {close}
+RSI(14): {rsi}
+MACD: {macd} (Signal: {macd_signal})
+EMA(20): {ema_20}
+EMA(50): {ema_50}
+ATR(14): {atr}
+Wstęgi Bollingera (Górna/Dolna): {bb_upper} / {bb_lower}
+Czy wykryto anomalię statystyczną na ostatniej sesji?: {'Tak' if is_anomaly else 'Nie'}
+-------------------------
+"""
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return {
+                "sentiment": "Neutral",
+                "recommendation": "Hold",
+                "summary": "Błąd: Brak klucza API (GEMINI_API_KEY) dla modelu LLM w pliku .env.",
+                "confidence": "Low"
+            }
+
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
         }
+        
+        request_data = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": system_prompt
+                        }
+                    ]
+                }
+            ]
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=request_data)
+            response.raise_for_status()
+            resp_json = response.json()
+            
+            # Wypakowywanie odpowiedzi Gemini
+            text_output = resp_json["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # Próba parsowania JSON z formatowania LLM-a
+            json_match = re.search(r'```json\s*(\{.*?\})\s*```', text_output, re.DOTALL | re.IGNORECASE)
+            
+            if json_match:
+                parsed_json = json.loads(json_match.group(1))
+                sentiment = parsed_json.get("sentiment", "Neutral")
+                recommendation = parsed_json.get("recommendation", "Hold")
+                confidence = parsed_json.get("confidence", "Medium")
+                # Oddzielenie tresci raportu od bloku technicznego JSON
+                raw_summary = text_output[:json_match.start()].strip()
+            else:
+                raw_summary = text_output.strip()
+                sentiment = "Neutral"
+                confidence = "Medium"
+                
+                # Zgrzebny Fallback
+                if "Kupuj" in raw_summary or "Kup" in raw_summary or "Buy" in raw_summary:
+                    recommendation = "Kupuj" if language == "pl" else "Buy"
+                elif "Sprzedaj" in raw_summary or "Sell" in raw_summary:
+                    recommendation = "Sprzedaj" if language == "pl" else "Sell"
+                else:
+                    recommendation = "Trzymaj" if language == "pl" else "Hold"
+
+            return {
+                "sentiment": sentiment,
+                "recommendation": recommendation,
+                "summary": raw_summary,
+                "confidence": confidence
+            }
+            
+        except Exception as e:
+            print("Błąd łączenia z Gemini API:", str(e))
+            return {
+                "sentiment": "Neutral",
+                "recommendation": "Hold",
+                "summary": f"Nie udało się połączyć z usługą AI: {str(e)}",
+                "confidence": "Low"
+            }
