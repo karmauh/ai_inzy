@@ -1,5 +1,4 @@
 from typing import List, Dict, Any
-import numpy as np
 
 class LLMService:
     @staticmethod

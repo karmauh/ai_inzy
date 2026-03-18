@@ -1,15 +1,11 @@
 from app.services.llm_service import LLMService
-from typing import Optional, Dict, Any, List
+from typing import Dict, Any
 import numpy as np
-from pydantic import BaseModel
-from app.models.schemas import StockDataPoint
 from app.services.anomaly_detector import AnomalyDetector
 from fastapi import APIRouter, HTTPException
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter()
-
-
-from fastapi.encoders import jsonable_encoder
 
 @router.post("/analyze")
 async def analyze_data(request: Dict[str, Any]):

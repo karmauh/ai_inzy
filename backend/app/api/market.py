@@ -1,13 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.services.market_data import MarketDataService
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
 
 router = APIRouter()
-
-class TickerRequest(BaseModel):
-    symbol: str
-    period: str = "1y"
 
 @router.get("/data/{symbol}")
 async def get_market_data(symbol: str, period: str = "1y"):

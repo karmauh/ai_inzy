@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from typing import List, Dict, Any
-from app.models.schemas import StockDataPoint
 
 class AnomalyDetector:
     @staticmethod
@@ -53,14 +52,9 @@ class AnomalyDetector:
             max_date = df['date'].max()
             cutoff_date = max_date - pd.Timedelta(days=60)
             
-            # Mask signals older than cutoff
+            # Maskowanie przestarzałych sygnałów 'Buy' powyżej dwóch miesięcy
             mask_old = df['date'] < cutoff_date
             df.loc[mask_old & (df['signal'] == 'Buy'), 'signal'] = 'Hold'
-            # We keep Sell signals or also filter them? User specifically mentioned "green arrows" (Buy).
-            # Let's filter both for consistency in "recent signals", but user emphasized arrows.
-            # I will filter only Buy signals as requested to avoid confusion if they want to see past sells? 
-            # The prompt says: "visual markers of entry points... generated only for the period covering at most two months back".
-            # It strictly implies Entry Points (Buy).
             
         except Exception:
             # Obsługa błędu przy filtrowaniu dat

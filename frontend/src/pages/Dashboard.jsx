@@ -11,6 +11,7 @@ const Dashboard = () => {
     // Stan wyszukiwania tickera
     const [searchLoading, setSearchLoading] = useState(false);
     const [tickerInfo, setTickerInfo] = useState(null);
+    const [error, setError] = useState(null);
 
     // Ponowna analiza po zmianie języka (jeśli dane są załadowane)
     useEffect(() => {
@@ -41,6 +42,7 @@ const Dashboard = () => {
         setAnalysisResults(null);
         setAssessment(null);
         setTickerInfo(null);
+        setError(null);
         
         try {
             const data = await fetchMarketData(symbol);
@@ -51,7 +53,11 @@ const Dashboard = () => {
             
         } catch (err) {
             console.error(err);
-            alert("Failed to fetch data for " + symbol);
+            if (err.response?.status === 404) {
+                setError(`${t('dashboard.notFound')} ${symbol.toUpperCase()}`);
+            } else {
+                setError(t('dashboard.error') || "Wystąpił błąd");
+            }
         } finally {
             setSearchLoading(false);
         }
@@ -75,7 +81,7 @@ const Dashboard = () => {
             
         } catch (err) {
             console.error("Analysis failed:", err);
-            alert("Analysis failed check console.");
+            setError(t('dashboard.error') || "Wystąpił błąd");
         } finally {
             setLoadingAnalysis(false);
         }
@@ -100,6 +106,14 @@ const Dashboard = () => {
                         
                         <div className="flex-1">
                             <TickerSearch onSearch={handleSearch} loading={searchLoading} />
+                            {error && (
+                                <div className="mt-4 p-4 bg-red-900/50 border border-red-500/50 rounded-xl text-red-200 text-sm animate-fade-in-up">
+                                    <div className="flex gap-3 items-center">
+                                        <span className="text-xl">⚠️</span>
+                                        <strong>{error}</strong>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         
                         {analysisResults && (
