@@ -14,13 +14,13 @@ async def analyze_data(request: Dict[str, Any]):
     """
     model_type = request.get('model_type', 'isolation_forest')
     
-    if model_type == "isolation_forest":
+    if model_type in ["isolation_forest", "lof", "ocsvm", "autoencoder"]:
         # Dane wejściowe w formacie listy słowników
         data_dicts = request.get('data')
         contamination = request.get('contamination', 0.05)
         
         # Wykrywanie anomalii
-        results = AnomalyDetector.detect_isolation_forest(data_dicts, contamination)
+        results = AnomalyDetector.detect_anomalies(data_dicts, model_type, contamination)
         
         # Generowanie interpretacji AI
         ticker_info = request.get('ticker_info')
