@@ -58,4 +58,13 @@ export const fetchMarketData = async (symbol) => {
     return response.data;
 };
 
+export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder']) => {
+    const response = await scale.post('/evaluation/evaluate', {
+        data,
+        fraction,
+        models
+    });
+    return response.data;
+};
+
 export default scale;

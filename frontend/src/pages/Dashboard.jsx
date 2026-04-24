@@ -3,7 +3,8 @@ import StockChart from '../components/StockChart';
 import TechnicalCharts from '../components/TechnicalCharts';
 import TickerSearch from '../components/TickerSearch';
 import AssessmentPanel from '../components/AssessmentPanel';
-import { analyzeData, fetchMarketData, exportCSV, exportPDF } from '../services/api';
+import ModelBenchmark from '../components/ModelBenchmark';
+import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
 const Dashboard = () => {
@@ -25,6 +26,14 @@ const Dashboard = () => {
     const [analysisResults, setAnalysisResults] = useState(null);
     const [assessment, setAssessment] = useState(null);
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+    
+    // Stany dla Benchmarku Modeli
+    const [activeTab, setActiveTab] = useState('analysis');
+    const [benchmarkData, setBenchmarkData] = useState(null);
+    const [loadingBenchmark, setLoadingBenchmark] = useState(false);
+    
+    // Stan wyboru aktualnego modelu (powiązanie z Benchmarkiem)
+    const [currentModel, setCurrentModel] = useState('isolation_forest');
 
     // Obsługa eksportu
     const handleExportCSV = () => {
@@ -41,6 +50,9 @@ const Dashboard = () => {
         setSearchLoading(true);
         setAnalysisResults(null);
         setAssessment(null);
+        setBenchmarkData(null);
+        setActiveTab('analysis');
+        setCurrentModel('isolation_forest');
         setTickerInfo(null);
         setError(null);
         
@@ -63,27 +75,45 @@ const Dashboard = () => {
         }
     };
 
-    const runAnalysis = async (dataPoints = null, tickerInfoOverride = null) => {
+    const runAnalysis = async (dataPoints = null, tickerInfoOverride = null, modelOverride = null) => {
         // Określenie źródła danych: przekazany argument lub aktualne wyniki analizy
         const points = dataPoints || analysisResults;
         const info = tickerInfoOverride || tickerInfo;
+        const modelToUse = modelOverride || currentModel;
 
         if (!points) return;
         
         setLoadingAnalysis(true);
         try {
             // Wywołanie API analizy anomalii i interpretacji AI
-            const results = await analyzeData(points, 'isolation_forest', 0.05, info, language);
+            const results = await analyzeData(points, modelToUse, 0.05, info, language);
             
             // Aktualizacja stanu wynikami z backendu
             setAnalysisResults(results.results);
             setAssessment(results.assessment);
+            if (modelOverride) setCurrentModel(modelOverride);
             
         } catch (err) {
             console.error("Analysis failed:", err);
             setError(t('dashboard.error') || "Wystąpił błąd");
         } finally {
             setLoadingAnalysis(false);
+        }
+    };
+
+    const handleRunBenchmark = async () => {
+        setActiveTab('benchmark');
+        if (benchmarkData) return; // Unikamy podwójnego żądania
+        
+        setLoadingBenchmark(true);
+        try {
+            const results = await evaluateModelsAPI(analysisResults);
+            setBenchmarkData(results);
+        } catch (err) {
+            console.error("Benchmark failed:", err);
+            setError(t('dashboard.error') || "Wystąpił błąd podczas pobierania benchmarku");
+        } finally {
+            setLoadingBenchmark(false);
         }
     };
 
@@ -182,15 +212,33 @@ const Dashboard = () => {
                  </div>
             </div>
 
+            {/* Widoki zakładek */}
+            {analysisResults && (
+                <div className="mb-6 flex space-x-2 bg-slate-800 p-1.5 rounded-xl w-fit mx-auto border border-slate-700/50 shadow-lg animate-fade-in-up">
+                    <button
+                        onClick={() => setActiveTab('analysis')}
+                        className={`px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${activeTab === 'analysis' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-slate-700/50'}`}
+                    >
+                        {t('benchmark.tabs.standardAnalysis')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('benchmark')}
+                        className={`px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${activeTab === 'benchmark' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-200 hover:bg-slate-700/50'}`}
+                    >
+                        {t('benchmark.tabs.modelsBenchmark')}
+                    </button>
+                </div>
+            )}
+
             {/* AI Assessment Panel */}
-             {assessment && (
+             {assessment && activeTab === 'analysis' && (
                 <div className="mb-8 animate-fade-in-up">
                     <AssessmentPanel assessment={assessment} />
                 </div>
              )}
 
-            {/* Wizualizacja wyników */}
-            {analysisResults && (
+            {/* Wizualizacja wyników Analizy */}
+            {analysisResults && activeTab === 'analysis' && (
                 <div className="space-y-8 animate-fade-in-up">
                      {/* Główny wykres giełdowy */}
                      <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
@@ -235,6 +283,18 @@ const Dashboard = () => {
                          </div>
                      </div>
                 </div>
+            )}
+            {/* Widok Benchmarku */}
+            {activeTab === 'benchmark' && (
+                <ModelBenchmark 
+                    evaluationData={benchmarkData?.evaluation}
+                    loading={loadingBenchmark}
+                    onRunBenchmark={handleRunBenchmark}
+                    onSelectModel={(modelKey) => {
+                        setActiveTab('analysis');
+                        runAnalysis(null, null, modelKey);
+                    }}
+                />
             )}
         </div>
     );
