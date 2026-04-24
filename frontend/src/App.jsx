@@ -1,6 +1,7 @@
 import React from 'react';
 import Dashboard from './pages/Dashboard';
-import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { LanguageProvider } from './context/LanguageProvider';
+import { useLanguage } from './context/LanguageContext';
 
 const AppContent = () => {
   const { language, setLanguage, t } = useLanguage();
