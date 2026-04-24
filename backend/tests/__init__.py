@@ -1,0 +1,1 @@
+# Moduł testowy dla backendu
