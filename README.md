@@ -5,17 +5,20 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 ## 🚀 Kluczowe Funkcje
 
 - **Monitorowanie w czasie rzeczywistym**: Pobieranie danych giełdowych bezpośrednio z `yfinance`.
-- **Wykrywanie Anomalii**: Wykorzystanie modelu _Isolation Forest_ do identyfikacji nietypowych ruchów cenowych.
-- **Wskaźniki Techniczne**: Automatyczne obliczanie RSI, MACD, Wstęg Bollingera, EMA oraz ATR.
-- **Interpretacja AI**: Generowanie raportów i rekomendacji (Kup/Sprzedaj) w języku polskim i angielskim.
-- **Interaktywne Wykresy**: Wizualizacja danych cenowych wraz z zaznaczonymi anomaliami i sygnałami wejścia.
+- **Wykrywanie Anomalii (Wielomodelowe)**: Integracja wielu zaawansowanych modeli uczenia maszynowego (m.in. Isolation Forest, LOF, One-Class SVM, Autoencoder) w celu precyzyjnej identyfikacji nietypowych ruchów cenowych.
+- **Ewaluacja i Benchmarking Modeli**: Wbudowany moduł ewaluacji pozwalający na bieżąco oceniać i porównywać skuteczność poszczególnych modeli ML z użyciem dedykowanych endpointów.
+- **Wskaźniki Techniczne**: Automatyczne obliczanie m.in. RSI, MACD, Wstęg Bollingera, EMA oraz ATR.
+- **Interpretacja AI**: Generowanie raportów i rekomendacji (Kup/Sprzedaj) przy wsparciu modeli językowych (Google Gemini AI).
+- **Rozbudowany Dashboard i Wykresy**: Interfejs wizualizujący dane cenowe, wykryte anomalie, wydajność modeli oraz sygnały wejścia.
+- **Wielojęzyczność (i18n)**: Pełne wsparcie dla wielojęzycznego interfejsu (m.in. j. polski i j. angielski) dzięki zintegrowanemu Providerowi Języków.
 
 ## 🛠 Technologie
 
 - **Backend**: FastAPI (Python 3.10)
-- **Frontend**: React + Vite (Tailwind CSS, Recharts)
-- **ML/AI**: Scikit-Learn (Isolation Forest), Google Gemini AI (Google AI Studio)
+- **Frontend**: React + Vite (Tailwind CSS, Recharts, i18next do wielojęzyczności)
+- **ML/AI**: Scikit-Learn (m.in. Isolation Forest, LOF, SVM), PyTorch/TensorFlow (dla Autoencoderów), Google Gemini AI
 - **Infrastruktura**: Docker, PostgreSQL
+- **Jakość kodu**: Wdrożone testy jednostkowe i integracyjne dla API.
 
 ---
 
@@ -34,7 +37,7 @@ Najszybsza metoda uruchomienia całej infrastruktury (Backend + Frontend + Baza 
    ```powershell
    docker-compose up --build
    ```
-3. **Dostęp do aplikacji:**
+4. **Dostęp do aplikacji:**
    - Frontend: [http://localhost:5173](http://localhost:5173)
    - API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
@@ -44,14 +47,10 @@ Najszybsza metoda uruchomienia całej infrastruktury (Backend + Frontend + Baza 
 
 Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
 
----
-
-### Sposób 2: Uruchomienie lokalne
-
 #### Windows
 
 1. **Konfiguracja klucza API**:
-   - Utwórz plik `backend/.env` i dodaj linię: `GEMINI_API_KEY=\"twój_klucz_tutaj\"`
+   - Utwórz plik `backend/.env` i dodaj linię: `GEMINI_API_KEY="twój_klucz_tutaj"`
 
 2. **Backend**:
    ```powershell
@@ -61,7 +60,7 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    cd backend
    uvicorn main:app --reload
    ```
-2. **Frontend**:
+3. **Frontend**:
    ```powershell
    cd frontend
    npm install
@@ -71,7 +70,7 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
 #### Linux / macOS
 
 1. **Konfiguracja klucza API**:
-   - Utwórz plik `backend/.env` i dodaj linię: `GEMINI_API_KEY=\"twój_klucz_tutaj\"`
+   - Utwórz plik `backend/.env` i dodaj linię: `GEMINI_API_KEY="twój_klucz_tutaj"`
 
 2. **Backend**:
    ```bash
@@ -81,7 +80,7 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    cd backend
    uvicorn main:app --reload
    ```
-2. **Frontend**:
+3. **Frontend**:
    ```bash
    cd frontend
    npm install
@@ -90,8 +89,8 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
 
 ## 📂 Struktura Projektu
 
-- `/backend` - Serwer API, modele ML i usługi AI.
-- `/frontend` - Interfejs użytkownika z interaktywnymi wykresami.
+- `/backend` - Serwer API, modele ML z modułem ewaluacji, testy jednostkowe/integracyjne oraz usługi AI.
+- `/frontend` - Interfejs użytkownika, i18n, interaktywne wykresy i rozbudowany dashboard.
 - `docker-compose.yml` - Konfiguracja całego środowiska.
 
 ---
