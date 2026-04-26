@@ -1,0 +1,10 @@
+venv/
+node_modules/
+frontend/node_modules/
+.git/
+.idea/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+postgres_data/
