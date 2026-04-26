@@ -56,7 +56,7 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    ```powershell
    python -m venv venv
    .\venv\Scripts\activate
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    cd backend
    uvicorn main:app --reload
    ```
@@ -76,7 +76,7 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    ```bash
    python3 -m venv venv
    source venv/bin/activate
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    cd backend
    uvicorn main:app --reload
    ```
