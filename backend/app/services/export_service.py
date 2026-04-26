@@ -121,4 +121,4 @@ class ExportService:
             pdf.ln()
             
         # fpdf2: output() zwraca bajty raportu jeśli nie podano nazwy pliku
-        return pdf.output(dest='S').encode('latin-1')
+        return bytes(pdf.output())
