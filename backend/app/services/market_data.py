@@ -52,8 +52,7 @@ class MarketDataService:
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 stock = yf.Ticker(ticker)
                 info = stock.info
-            
-            # Ekstrakcja kluczowych wskaźników mikro/makro ekonomicznych
+
             return {
                 "name": info.get("longName") or info.get("shortName"),
                 "symbol": info.get("symbol"),
@@ -67,6 +66,5 @@ class MarketDataService:
                 "currency": info.get("currency"),
                 "description": info.get("longBusinessSummary"),
             }
-        except Exception as e:
-            print(f"Error fetching info for {ticker}: {e}")
+        except Exception:
             return {}

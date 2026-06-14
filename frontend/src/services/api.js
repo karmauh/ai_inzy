@@ -9,23 +9,25 @@ const scale = axios.create({
     },
 });
 
-// Eksport danych do CSV
-export const exportCSV = async (data) => {
-    const response = await axios.post(`${API_URL}/export/csv`, data, {
-        responseType: 'blob'
-    });
+const downloadFile = async (response, filename) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'stock_data.csv');
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link); // Clean up the DOM
+    document.body.removeChild(link);
 };
 
-// Eksport raportu do PDF
+export const exportCSV = async (data) => {
+    const response = await scale.post('/export/csv', data, {
+        responseType: 'blob'
+    });
+    downloadFile(response, 'stock_data.csv');
+};
+
 export const exportPDF = async (data, assessment, tickerInfo, language) => {
-    const response = await axios.post(`${API_URL}/export/pdf`, {
+    const response = await scale.post('/export/pdf', {
         data,
         assessment,
         ticker_info: tickerInfo,
@@ -33,13 +35,7 @@ export const exportPDF = async (data, assessment, tickerInfo, language) => {
     }, {
         responseType: 'blob'
     });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'analysis_report.pdf');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link); // Clean up the DOM
+    downloadFile(response, 'analysis_report.pdf');
 };
 
 export const analyzeData = async (data, modelType = 'isolation_forest', contamination = 0.05, tickerInfo = null, language = 'pl') => {

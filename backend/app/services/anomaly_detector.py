@@ -160,20 +160,18 @@ class AnomalyDetector:
         df.loc[sell_condition, 'signal'] = 'Sell'
         
         # Filtrowanie dat: ograniczenie sygnałów 'Buy' do ostatnich 2 miesięcy
-        
+
         try:
             if not pd.api.types.is_datetime64_any_dtype(df['date']):
                 df['date'] = pd.to_datetime(df['date'])
-                
+
             max_date = df['date'].max()
             cutoff_date = max_date - pd.Timedelta(days=60)
-            
-            # Maskowanie przestarzałych sygnałów 'Buy' powyżej dwóch miesięcy
+
             mask_old = df['date'] < cutoff_date
             df.loc[mask_old & (df['signal'] == 'Buy'), 'signal'] = 'Hold'
-            
-        except Exception:
-            # Obsługa błędu przy filtrowaniu dat
+
+        except (ValueError, KeyError, TypeError):
             pass
 
         # Wybór kolumn do zwrócenia (zgodnie ze schematem StockDataPoint)

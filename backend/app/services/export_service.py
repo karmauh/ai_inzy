@@ -1,6 +1,5 @@
 import pandas as pd
 from fpdf import FPDF
-import io
 from typing import List, Dict, Any
 import os
 
