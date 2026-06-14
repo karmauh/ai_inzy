@@ -39,30 +39,46 @@ class AnomalyDetector:
             return []
             
         df = pd.DataFrame(data)
+
+        # Upewniamy się, że wszystkie wymagane kolumny techniczne istnieją (z bezpiecznymi wartościami domyślnymi)
+        for col in ['ema_20', 'ema_50', 'sma_20', 'sma_50', 'bb_upper', 'bb_lower']:
+            if col not in df.columns or df[col].isnull().all():
+                df[col] = df['close']
+        for col in ['volatility', 'returns', 'rsi', 'atr']:
+            if col not in df.columns or df[col].isnull().all():
+                df[col] = 0.0
+
+        # Konwertujemy wszystkie kolumny liczbowe na float64, aby uniknąć problemów z typem object (None)
+        numeric_cols = [
+            'open', 'high', 'low', 'close', 'volume', 'returns', 'volatility',
+            'sma_20', 'sma_50', 'rsi', 'macd', 'macd_signal', 'ema_20', 'ema_50',
+            'bb_upper', 'bb_lower', 'atr'
+        ]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # --- FEATURE ENGINEERING ---
+        # Cechy podstawowe: stopy zwrotu i zmienność wolumenu
+        df['return_1d'] = df['close'].pct_change(1)
+        df['return_3d'] = df['close'].pct_change(3)
+        df['return_7d'] = df['close'].pct_change(7)
         
-        # FAZA 1: Podstawowe nowe cechy wejściowe
-        df['return_1d'] = df.get('close').pct_change(1)
-        df['return_3d'] = df.get('close').pct_change(3)
-        df['return_7d'] = df.get('close').pct_change(7)
-        
-        df['volume_change'] = df.get('volume').pct_change(1)
-        df['volume_sma_20'] = df.get('volume').rolling(window=20).mean()
+        df['volume_change'] = df['volume'].pct_change(1)
+        df['volume_sma_20'] = df['volume'].rolling(window=20).mean()
         
         # Cechy odległościowe i pozycyjne (bezpieczne przed dzieleniem przez 0)
-        ema_20_safe = df.get('ema_20', df['close']).replace(0, np.nan)
-        df['dist_to_ema20'] = (df['close'] - df.get('ema_20', df['close'])) / ema_20_safe
+        ema_20_safe = df['ema_20'].replace(0, np.nan)
+        df['dist_to_ema20'] = (df['close'] - df['ema_20']) / ema_20_safe
         
-        bb_width = (df.get('bb_upper', df['close']) - df.get('bb_lower', df['close'])).replace(0, np.nan)
-        df['bb_position'] = (df['close'] - df.get('bb_lower', df['close'])) / bb_width
+        bb_width = (df['bb_upper'] - df['bb_lower']).replace(0, np.nan)
+        df['bb_position'] = (df['close'] - df['bb_lower']) / bb_width
         
         rolling_std_20 = df['close'].rolling(window=20).std().replace(0, np.nan)
-        df['z_score_20'] = (df['close'] - df.get('sma_20', df['close'])) / rolling_std_20
+        df['z_score_20'] = (df['close'] - df['sma_20']) / rolling_std_20
         
-        df['volatility_change'] = df.get('volatility').pct_change(1)
+        df['volatility_change'] = df['volatility'].pct_change(1)
         
-        # FAZA 2: Zaawansowane cechy (przygotowane pod kolejne etapy)
+        # Cechy zaawansowane: momentum, drawdown, struktura świec
         df['momentum_5d'] = df['close'] - df['close'].shift(5)
         
         rolling_max = df['close'].cummax()

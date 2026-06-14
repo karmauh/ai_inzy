@@ -33,7 +33,7 @@ class MarketDataService:
             
             # Formatery dla serializacji JSON (daty i wartości NaN)
             if 'date' in df.columns:
-                df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+                df['date'] = pd.to_datetime(df['date'], utc=True).dt.strftime('%Y-%m-%d')
             
             df = df.astype(object).where(pd.notnull(df), None)
             
