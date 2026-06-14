@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 body {
-  background-color: #0f172a; /* slate-900 */
-  color: white;
+  background-color: #0f1419;
+  color: #e8e9ea;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }

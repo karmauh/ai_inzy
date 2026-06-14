@@ -14,14 +14,10 @@ import { useLanguage } from '../context/LanguageContext';
 
 const StockChart = ({ data }) => {
   const { t } = useLanguage();
-  if (!data || data.length === 0) return <p className="text-center text-gray-500">No data to display</p>;
+  if (!data || data.length === 0) return <p className="text-center text-neutral-400">No data to display</p>;
 
-  // Przygotowanie danych: nałożenie anomalii i sygnałów na wykres cenowy
-  // Używamy ComposedChart, aby połączyć linię cen z punktami anomalii (Scatter)
-  
   const formattedData = data.map(item => ({
     ...item,
-    // Punkty dla anomalii i sygnałów kupna wymagają tych samych współrzędnych X i Y co linia ceny
     anomalyVal: item.is_anomaly ? item.close : null,
     buySignalVal: item.signal === 'Buy' ? item.close : null
   }));
@@ -30,7 +26,7 @@ const StockChart = ({ data }) => {
     const { cx, cy } = props;
     if (!cx || !cy) return null;
     return (
-      <svg x={cx - 10} y={cy + 10} width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <svg x={cx - 10} y={cy + 10} width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="19" x2="12" y2="5"></line>
         <polyline points="5 12 12 5 19 12"></polyline>
       </svg>
@@ -38,8 +34,8 @@ const StockChart = ({ data }) => {
   };
 
   return (
-    <div className="w-full h-[400px] bg-slate-800 p-4 rounded-lg shadow-lg">
-      <h3 className="text-lg font-bold text-gray-200 mb-4">{t('charts.priceTitle')}</h3>
+    <div className="w-full h-[400px] bg-neutral-800 p-4 rounded-lg shadow-lg">
+      <h3 className="text-lg font-bold text-white mb-4">{t('charts.priceTitle')}</h3>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={formattedData}
@@ -50,10 +46,10 @@ const StockChart = ({ data }) => {
             left: 0,
           }}
         >
-          <CartesianGrid stroke="#374151" strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="date" 
-            tick={{ fill: '#9CA3AF' }}
+          <CartesianGrid stroke="#374151" strokeDasharray="3 3" opacity={0.3} />
+          <XAxis
+            dataKey="date"
+            tick={{ fill: '#d1d5db' }}
             tickFormatter={(str) => {
               try {
                 return str.split('T')[0];
@@ -61,39 +57,36 @@ const StockChart = ({ data }) => {
             }}
             minTickGap={30}
           />
-          <YAxis domain={['auto', 'auto']} tick={{ fill: '#9CA3AF' }} />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', color: '#F3F4F6' }}
-            itemStyle={{ color: '#F3F4F6' }}
-            labelStyle={{ color: '#9CA3AF' }}
+          <YAxis domain={['auto', 'auto']} tick={{ fill: '#d1d5db' }} />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#1f2937', borderColor: '#4b5563', color: '#e8e9ea' }}
+            itemStyle={{ color: '#e8e9ea' }}
+            labelStyle={{ color: '#9ca3af' }}
           />
           <Legend />
-          
-          {/* Główna linia ceny */}
-          <Line 
-            type="monotone" 
-            dataKey="close" 
-            stroke="#3B82F6" 
-            dot={false} 
+
+          <Line
+            type="monotone"
+            dataKey="close"
+            stroke="#14b8a6"
+            dot={false}
             name={t('charts.closePrice')}
             strokeWidth={2}
           />
 
-          {/* Punkty anomalii */}
-          <Scatter 
+          <Scatter
             name={t('charts.anomaly')}
-            dataKey="anomalyVal" 
-            fill="#EF4444" 
+            dataKey="anomalyVal"
+            fill="#ef4444"
             shape="circle"
           />
 
-          {/* Strzałki sygnałów kupna */}
-          <Scatter 
+          <Scatter
             name={t('charts.buySignal')}
-            dataKey="buySignalVal" 
+            dataKey="buySignalVal"
             shape={<CustomArrow />}
             legendType="triangle"
-            fill="#10B981"
+            fill="#14b8a6"
           />
         </ComposedChart>
       </ResponsiveContainer>

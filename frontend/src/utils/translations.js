@@ -12,8 +12,6 @@ export const translations = {
       selectPrompt: "Wyszukaj ticker, aby rozpocząć analizę.",
       notFound: "Nie znaleziono danych dla symbolu",
       error: "Wystąpił błąd",
-      standardAnalysis: "Standardowa Analiza",
-      modelsBenchmark: "Benchmark Modeli",
     },
     benchmark: {
       tabs: {
@@ -124,8 +122,6 @@ export const translations = {
       selectPrompt: "Search for a ticker to begin analysis.",
       notFound: "No data found for symbol",
       error: "An error occurred",
-      standardAnalysis: "Standard Analysis",
-      modelsBenchmark: "Models Benchmark",
     },
     benchmark: {
       tabs: {

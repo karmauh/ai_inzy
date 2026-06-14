@@ -14,19 +14,19 @@ const TickerSearch = ({ onSearch, loading }) => {
 
     return (
         <div className="mb-4">
-            <h3 className="text-xs font-semibold mb-2 text-gray-400 uppercase tracking-widest">Market Search</h3>
+            <h3 className="text-xs font-semibold mb-2 text-neutral-400 uppercase tracking-widest">Market Search</h3>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <input
                     type="text"
                     value={symbol}
                     onChange={(e) => setSymbol(e.target.value)}
                     placeholder={t('dashboard.searchPlaceholder')}
-                    className="w-full bg-slate-900/50 border border-slate-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-gray-600"
+                    className="w-full bg-neutral-700 border border-neutral-600 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 transition-all placeholder:text-neutral-500"
                 />
                 <button
                     type="submit"
                     disabled={loading || !symbol}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-[0.98] flex items-center justify-center"
+                    className="w-full bg-primary-600 hover:bg-primary-500 text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-[0.98] flex items-center justify-center"
                 >
                     {loading ? (
                         <span className="flex items-center gap-2">
