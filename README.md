@@ -14,7 +14,7 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 
 ## 🛠 Technologie
 
-- **Backend**: FastAPI (Python 3.11; minimalnie 3.9), Pydantic do walidacji zapytań
+- **Backend**: FastAPI (Python 3.14), Pydantic do walidacji zapytań
 - **Frontend**: React 18 + Vite (Tailwind CSS, Recharts, Axios)
 - **ML/AI**: Scikit-Learn (Isolation Forest, LOF, One-Class SVM), PyTorch (Autoencoder), Google Gemini (interpretacja wyników)
 - **Infrastruktura**: Docker + Docker Compose
@@ -33,6 +33,8 @@ Najszybsza metoda uruchomienia całej aplikacji (Backend + Frontend).
    GEMINI_API_KEY="twój_google_ai_studio_api_key_tutaj"
    # Opcjonalnie: dozwolone originy frontendu (rozdzielone przecinkami)
    CORS_ORIGINS="http://localhost:5173"
+   # Opcjonalnie: modele Gemini próbowane po kolei (kolejny, gdy poprzedni jest przeciążony)
+   GEMINI_MODELS="gemini-3.5-flash-lite,gemini-3.1-flash-lite"
    ```
 2. **Upewnij się, że masz zainstalowany Docker Desktop.**
 3. **Uruchom projekt jedną komendą:**
