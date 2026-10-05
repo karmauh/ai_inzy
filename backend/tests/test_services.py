@@ -287,3 +287,13 @@ def test_evaluation_reports_detection_rate_by_type(market_data):
 def test_unknown_scenario_is_rejected(market_data):
     with pytest.raises(ValueError, match="scenario"):
         EvaluationService.inject_synthetic_anomalies(market_data, scenario='nope')
+
+
+def test_csv_export_flattens_explanations():
+    csv = ExportService.generate_csv([
+        {"date": "2026-01-02", "close": 1.0, "explanation": None},
+        {"date": "2026-01-03", "close": 2.0, "explanation": [{"feature": "volume_ratio", "value": 4.0213, "typical": 1.0, "z": 8.71}]},
+    ])
+
+    assert "volume_ratio=4.021 (z=+8.7)" in csv
+    assert "[{" not in csv

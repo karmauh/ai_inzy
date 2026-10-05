@@ -10,6 +10,30 @@ import {
   Scatter
 } from 'recharts';
 import { useLanguage } from '../context/LanguageContext';
+import ExplanationList from './ExplanationList';
+
+// Podpowiedź wykresu: data, cena i – dla anomalii – wyjaśnienie, co było nietypowe
+const PriceTooltip = ({ active, payload, label, t }) => {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="bg-neutral-800 border border-neutral-600 rounded-lg p-3 shadow-xl max-w-[340px]">
+      <p className="text-neutral-400 text-xs mb-1">{label}</p>
+      <p className="text-white font-bold">{t('charts.closePrice')}: {typeof row.close === 'number' ? row.close.toFixed(2) : row.close}</p>
+      {(row.signal === 'Buy' || row.signal === 'Sell') && (
+        <p className={`text-xs font-bold mt-1 ${row.signal === 'Buy' ? 'text-primary-400' : 'text-orange-400'}`}>
+          {row.signal === 'Buy' ? `▲ ${t('charts.buySignal')}` : `▼ ${t('charts.sellSignal')}`}
+        </p>
+      )}
+      {row.is_anomaly && (
+        <div className="mt-2 pt-2 border-t border-neutral-600">
+          <p className="text-red-400 font-bold text-xs mb-1">⚠️ {t('charts.anomaly')}</p>
+          <ExplanationList explanation={row.explanation} compact />
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Strzałka sygnału: kupno pod ceną (w górę), sprzedaż nad ceną (w dół)
 const SignalArrow = ({ cx, cy, direction, color }) => {
@@ -59,11 +83,7 @@ const StockChart = ({ data }) => {
             minTickGap={30}
           />
           <YAxis domain={['auto', 'auto']} tick={{ fill: '#d1d5db' }} />
-          <Tooltip
-            contentStyle={{ backgroundColor: '#1f2937', borderColor: '#4b5563', color: '#e8e9ea' }}
-            itemStyle={{ color: '#e8e9ea' }}
-            labelStyle={{ color: '#9ca3af' }}
-          />
+          <Tooltip content={<PriceTooltip t={t} />} />
           <Legend />
 
           <Line

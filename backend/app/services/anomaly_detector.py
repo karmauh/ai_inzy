@@ -44,6 +44,13 @@ WALK_FORWARD_MIN_CALIBRATION = 20
 # Sygnały starsze niż tyle dni od ostatniej sesji są wygaszane do 'Hold'
 SIGNAL_LOOKBACK_DAYS = 60
 
+# Wyjaśnienia anomalii: cechy porównywane z poprzednimi EXPLANATION_WINDOW sesjami (bez sesji ocenianej)
+EXPLANATION_WINDOW = 120
+EXPLANATION_MIN_HISTORY = 20
+EXPLANATION_TOP_FEATURES = 3
+# 'returns' to ta sama wartość co 'return_1d' – pomijamy duplikat w wyjaśnieniach
+EXPLANATION_EXCLUDED = {'returns'}
+
 FEATURES = [
     'returns', 'volatility', 'rsi', 'atr',
     'return_1d', 'return_3d', 'return_7d',
@@ -259,6 +266,34 @@ class AnomalyDetector:
         return flags
 
     @staticmethod
+    def explain(feats: pd.DataFrame, rows: np.ndarray) -> Dict[int, List[Dict[str, Any]]]:
+        """
+        Dla wskazanych sesji zwraca cechy najbardziej odbiegające od normy – odporny z-score względem
+        mediany i rozstępu międzykwartylowego z poprzednich EXPLANATION_WINDOW sesji (bez sesji ocenianej,
+        więc wyjaśnienie nie korzysta z przyszłości). Mechanizm jest niezależny od modelu: opisuje, co było
+        nietypowe w danej sesji, a nie wewnętrzne działanie konkretnego algorytmu.
+        """
+        candidates = [c for c in feats.columns if c not in EXPLANATION_EXCLUDED]
+        history = feats[candidates].rolling(EXPLANATION_WINDOW, min_periods=EXPLANATION_MIN_HISTORY)
+        median = history.median().shift(1)
+        iqr = (history.quantile(0.75) - history.quantile(0.25)).shift(1).replace(0, np.nan)
+        z = (feats[candidates] - median) / iqr
+
+        explanations = {}
+        for row in rows:
+            top = z.iloc[row].dropna().abs().sort_values(ascending=False).head(EXPLANATION_TOP_FEATURES)
+            explanations[int(row)] = [
+                {
+                    "feature": feature,
+                    "value": float(feats.iloc[row][feature]),
+                    "typical": float(median.iloc[row][feature]),
+                    "z": float(z.iloc[row][feature]),
+                }
+                for feature in top.index
+            ]
+        return explanations
+
+    @staticmethod
     def detect_anomalies(data: List[Dict[str, Any]], model_type: str = 'isolation_forest', contamination: float = 0.05,
                          mode: str = 'batch') -> List[Dict[str, Any]]:
         """
@@ -295,9 +330,9 @@ class AnomalyDetector:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
+        raw_features = AnomalyDetector.build_features(df, impute=False)[FEATURES]
         if mode == 'walk_forward':
-            scores, flags = AnomalyDetector._walk_forward(
-                AnomalyDetector.build_features(df, impute=False)[FEATURES], model_type, contamination)
+            scores, flags = AnomalyDetector._walk_forward(raw_features, model_type, contamination)
         else:
             # Wspólne skalowanie danych dla wszystkich modeli (wymagane w OCSVM i LOF, przydatne opcjonalnie w IF)
             X_scaled = StandardScaler().fit_transform(AnomalyDetector.build_features(df)[FEATURES])
@@ -307,6 +342,10 @@ class AnomalyDetector:
         # anomaly_score: wyższa wartość = silniejsza anomalia
         df['anomaly_score'] = scores
         df['is_anomaly'] = flags
+
+        # Wyjaśnienia tylko dla sesji oznaczonych jako anomalie (pozostałe: None – mniejsza odpowiedź API)
+        explanations = AnomalyDetector.explain(raw_features, np.flatnonzero(flags))
+        df['explanation'] = [explanations.get(i) for i in range(len(df))]
 
         # Sygnały transakcyjne (strategia konfluencji – oba warunki muszą być spełnione):
         # Kupno: RSI < 32 ORAZ cena poniżej dolnej wstęgi Bollingera
@@ -327,7 +366,7 @@ class AnomalyDetector:
             'date', 'open', 'high', 'low', 'close', 'volume',
             'returns', 'volatility', 'sma_20', 'sma_50',
             'rsi', 'macd', 'macd_signal', 'ema_20', 'ema_50',
-            'bb_upper', 'bb_lower', 'atr', 'anomaly_score', 'is_anomaly', 'signal'
+            'bb_upper', 'bb_lower', 'atr', 'anomaly_score', 'is_anomaly', 'signal', 'explanation'
         ]
         available_cols = [c for c in valid_output_cols if c in df.columns]
 

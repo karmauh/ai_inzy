@@ -5,6 +5,7 @@ import TickerSearch from '../components/TickerSearch';
 import AssessmentPanel from '../components/AssessmentPanel';
 import ModelBenchmark from '../components/ModelBenchmark';
 import AnalysisSettings from '../components/AnalysisSettings';
+import ResultsTable from '../components/ResultsTable';
 import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI, generateAssessment } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -337,39 +338,7 @@ const Dashboard = () => {
                      <TechnicalCharts data={analysisResults} />
 
                      {/* Sekcja tabeli wyników */}
-                     <div className="bg-neutral-800 p-6 rounded-lg shadow-lg">
-                         <h2 className="text-xl font-bold mb-4 text-primary-400">{t('table.title')}</h2>
-                         <div className="overflow-x-auto max-h-[400px] scrollbar-thin scrollbar-thumb-neutral-600">
-                            <table className="w-full text-left text-neutral-300">
-                                <thead className="bg-neutral-700 sticky top-0">
-                                    <tr className="border-b border-neutral-600">
-                                        <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.date')}</th>
-                                        <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.close')}</th>
-                                        <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.score')}</th>
-                                        <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.status')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {analysisResults.map((row) => (
-                                        <tr key={row.date} className={`border-b border-neutral-700 hover:bg-neutral-700/50 transition-colors ${row.is_anomaly ? 'bg-red-900/20' : ''}`}>
-                                            <td className="py-2 px-4">{row.date}</td>
-                                            <td className="py-2 px-4">{typeof row.close === 'number' ? row.close.toFixed(2) : row.close}</td>
-                                            <td className="py-2 px-4">{typeof row.anomaly_score === 'number' ? row.anomaly_score.toFixed(4) : '—'}</td>
-                                            <td className="py-2 px-4">
-                                                {row.is_anomaly ? (
-                                                    <span className="text-red-400 font-bold flex items-center gap-1">
-                                                        ⚠️ {t('table.anomaly')}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-emerald-400 text-sm font-medium">{t('table.normal')}</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                         </div>
-                     </div>
+                     <ResultsTable rows={analysisResults} />
                 </div>
             )}
             {/* Widok Benchmarku */}

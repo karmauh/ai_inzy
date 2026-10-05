@@ -199,3 +199,49 @@ def test_walk_forward_refit_interval_is_capped_for_long_histories():
     assert interval(251) == WALK_FORWARD_REFIT_EVERY
     for n in (500, 1255, 2500):
         assert np.ceil((n - WALK_FORWARD_MIN_TRAIN) / interval(n)) <= WALK_FORWARD_MAX_REFITS
+
+
+# --- Wyjaśnienia anomalii ---
+
+@pytest.mark.parametrize("mode", ["batch", "walk_forward"])
+def test_every_anomaly_has_explanation(market_data, mode):
+    from app.services.anomaly_detector import EXPLANATION_TOP_FEATURES
+    results = AnomalyDetector.detect_anomalies(market_data, model_type="isolation_forest", mode=mode)
+
+    for r in results:
+        if r['is_anomaly']:
+            assert 1 <= len(r['explanation']) <= EXPLANATION_TOP_FEATURES
+            assert all({'feature', 'value', 'typical', 'z'} <= set(e) for e in r['explanation'])
+            # Posortowane od najbardziej odstającej cechy, bez zduplikowanego 'returns'
+            zs = [abs(e['z']) for e in r['explanation']]
+            assert zs == sorted(zs, reverse=True)
+            assert 'returns' not in {e['feature'] for e in r['explanation']}
+        else:
+            assert r['explanation'] is None
+
+
+def test_explanation_points_to_injected_volume_spike(market_data):
+    from app.services.data_processor import DataProcessor
+    spike = 180
+    df = pd.DataFrame(market_data)[['date', 'open', 'high', 'low', 'close', 'volume']]
+    df['volume'] = df['volume'].astype(float)
+    df.loc[spike, 'volume'] *= 8
+    data = DataProcessor.add_technical_indicators(df.astype({'open': float, 'high': float, 'low': float, 'close': float}))
+    data = data.astype(object).where(pd.notnull(data), None).to_dict(orient='records')
+
+    results = AnomalyDetector.detect_anomalies(data, model_type="lof", contamination=0.05)
+
+    assert results[spike]['is_anomaly']
+    assert results[spike]['explanation'][0]['feature'] in {'volume_ratio', 'volume_change'}
+    assert results[spike]['explanation'][0]['z'] > 3
+
+
+def test_explanation_does_not_use_future_data(market_data):
+    # Wyjaśnienie sesji t zależy tylko od sesji <= t
+    feats = AnomalyDetector.build_features(pd.DataFrame(market_data), impute=False)
+    from app.services.anomaly_detector import FEATURES
+    feats = feats[FEATURES]
+    altered = feats.copy()
+    altered.iloc[151:] = altered.iloc[151:] * 5
+
+    assert AnomalyDetector.explain(feats, np.array([150])) == AnomalyDetector.explain(altered, np.array([150]))

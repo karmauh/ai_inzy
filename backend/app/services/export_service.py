@@ -76,6 +76,12 @@ _RECOMMENDATION_COLORS = {
 }
 
 
+def _format_explanation(explanation: Any) -> str:
+    if not isinstance(explanation, list):
+        return ''
+    return '; '.join(f"{e['feature']}={e['value']:.4g} (z={e['z']:+.1f})" for e in explanation)
+
+
 def _fmt_number(value: Any) -> str:
     return f"{value:.2f}" if isinstance(value, (int, float)) and not isinstance(value, bool) else "N/A"
 
@@ -86,7 +92,11 @@ class ExportService:
         """
         Generuje dane CSV z listy wyników analizy.
         """
-        return pd.DataFrame(data).to_csv(index=False)
+        df = pd.DataFrame(data)
+        if 'explanation' in df.columns:
+            # Lista cech odstających -> czytelny tekst, np. "volume_ratio=4.02 (z=+8.7); return_1d=-0.0999 (z=-6.2)"
+            df['explanation'] = df['explanation'].map(_format_explanation)
+        return df.to_csv(index=False)
 
     @staticmethod
     def generate_pdf(data: List[Dict[str, Any]], assessment: Dict[str, Any], ticker_info: Dict[str, Any], language: str = 'pl') -> bytes:

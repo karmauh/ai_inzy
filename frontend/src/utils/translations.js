@@ -174,6 +174,25 @@ export const translations = {
         Low: "Niska",
       },
     },
+    features: {
+      return_1d: "Zmiana ceny (1 dzień)",
+      return_3d: "Zmiana ceny (3 dni)",
+      return_7d: "Zmiana ceny (7 dni)",
+      momentum_5d: "Momentum (5 dni)",
+      dist_to_ema20: "Odległość od EMA 20",
+      drawdown: "Odległość od szczytu",
+      volume_change: "Zmiana wolumenu (d/d)",
+      volatility_change: "Zmiana zmienności (d/d)",
+      volatility: "Zmienność 20 sesji (% ceny)",
+      atr: "ATR (% ceny)",
+      body: "Korpus świecy (% ceny)",
+      upper_shadow: "Górny cień świecy (% ceny)",
+      lower_shadow: "Dolny cień świecy (% ceny)",
+      volume_ratio: "Wolumen vs średnia 20 sesji",
+      rsi: "RSI",
+      z_score_20: "Odchylenie od SMA 20 (σ)",
+      bb_position: "Pozycja we wstęgach Bollingera"
+    },
     table: {
       title: "Szczegółowe Dane",
       date: "Data",
@@ -182,6 +201,11 @@ export const translations = {
       status: "Status",
       anomaly: "ANOMALIA",
       normal: "Normalny",
+      why: "Dlaczego anomalia?",
+      typical: "typowo",
+      onlyAnomalies: "Tylko anomalie",
+      noAnomalies: "Brak anomalii w wybranym okresie.",
+      explanationNote: "Przy anomaliach pokazujemy cechy sesji, które najbardziej odbiegały od normy – czyli od zachowania spółki w poprzednich ok. 6 miesiącach (▲ wyżej, ▼ niżej niż zwykle). To opis tego, co było nietypowe, a nie dokładny zapis rozumowania modelu."
     }
   },
   en: {
@@ -359,6 +383,25 @@ export const translations = {
         Low: "Low",
       },
     },
+    features: {
+      return_1d: "Price change (1 day)",
+      return_3d: "Price change (3 days)",
+      return_7d: "Price change (7 days)",
+      momentum_5d: "Momentum (5 days)",
+      dist_to_ema20: "Distance from EMA 20",
+      drawdown: "Distance from peak",
+      volume_change: "Volume change (d/d)",
+      volatility_change: "Volatility change (d/d)",
+      volatility: "20-session volatility (% of price)",
+      atr: "ATR (% of price)",
+      body: "Candle body (% of price)",
+      upper_shadow: "Upper shadow (% of price)",
+      lower_shadow: "Lower shadow (% of price)",
+      volume_ratio: "Volume vs 20-session average",
+      rsi: "RSI",
+      z_score_20: "Deviation from SMA 20 (σ)",
+      bb_position: "Position within Bollinger Bands"
+    },
     table: {
       title: "Detailed Data",
       date: "Date",
@@ -367,6 +410,11 @@ export const translations = {
       status: "Status",
       anomaly: "ANOMALY",
       normal: "Normal",
+      why: "Why an anomaly?",
+      typical: "typically",
+      onlyAnomalies: "Anomalies only",
+      noAnomalies: "No anomalies in the selected period.",
+      explanationNote: "For anomalies we show the session features that deviated most from normal – i.e. from the stock's behaviour over the previous ~6 months (▲ higher, ▼ lower than usual). This describes what was unusual, not the exact reasoning of the model."
     }
   }
 };
