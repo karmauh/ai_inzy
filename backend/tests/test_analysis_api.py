@@ -142,3 +142,9 @@ def test_analyze_rejects_unknown_mode(request_payload):
     response = client.post("/api/v1/analyze", json=request_payload)
 
     assert response.status_code == 422
+
+
+def test_evaluate_endpoint_rejects_unknown_scenario(request_payload):
+    response = client.post("/api/v1/evaluation/evaluate", json={"data": request_payload["data"], "scenario": "nope"})
+
+    assert response.status_code == 422

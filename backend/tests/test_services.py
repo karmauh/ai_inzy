@@ -229,3 +229,61 @@ def test_walk_forward_evaluation_parallel_matches_sequential(market_data, monkey
 def test_walk_forward_evaluation_rejects_too_little_data(market_data):
     with pytest.raises(ValueError, match="Walk-forward"):
         EvaluationService.evaluate_models(market_data[:40], mode='walk_forward')
+
+
+# --- Scenariusz rozszerzony ---
+
+@pytest.mark.parametrize("seed", range(5))
+def test_extended_scenario_respects_budget_and_event_shapes(market_data, seed):
+    from app.services.evaluation_service import COLLECTIVE_LENGTH, COLLECTIVE_TYPES, POINT_TYPES
+    rows = EvaluationService.inject_synthetic_anomalies(market_data, fraction=0.05, seed=seed, scenario='extended')
+
+    assert sum(r['ground_truth'] for r in rows) == int(np.ceil(len(rows) * 0.05))
+
+    events = {}
+    for i, r in enumerate(rows):
+        if r['ground_truth']:
+            events.setdefault(r['anomaly_event'], []).append((i, r['anomaly_type']))
+    for sessions in events.values():
+        indices, types = zip(*sessions)
+        assert len(set(types)) == 1
+        expected_len = COLLECTIVE_LENGTH if types[0] in COLLECTIVE_TYPES else 1
+        assert types[0] in POINT_TYPES + COLLECTIVE_TYPES
+        assert list(indices) == list(range(indices[0], indices[0] + expected_len))
+
+    # Zdarzenia nie stykają się ze sobą (co najmniej jedna sesja odstępu)
+    starts_ends = sorted((min(i for i, _ in s), max(i for i, _ in s)) for s in events.values())
+    assert all(nxt[0] - prev[1] >= 2 for prev, nxt in zip(starts_ends, starts_ends[1:]))
+
+
+def test_extended_drift_shifts_level_without_artificial_reversal(market_data):
+    # Po dryfie poziom ceny zostaje przesunięty – brak sztucznego skoku powrotnego po zakończeniu zdarzenia
+    for seed in range(20):
+        rows = EvaluationService.inject_synthetic_anomalies(market_data, fraction=0.05, seed=seed, scenario='extended')
+        drift = [i for i, r in enumerate(rows) if r['anomaly_type'] == 'drift']
+        if drift and drift[-1] + 2 < len(rows):
+            after = drift[-1] + 1
+            original_return = market_data[after + 1]['close'] / market_data[after]['close']
+            injected_return = rows[after + 1]['close'] / rows[after]['close']
+            assert injected_return == pytest.approx(original_return)
+            return
+    pytest.fail("Brak zdarzenia typu drift w 20 losowaniach")
+
+
+def test_basic_scenario_uses_only_point_types(market_data):
+    rows = EvaluationService.inject_synthetic_anomalies(market_data, fraction=0.05, seed=1, scenario='basic')
+
+    assert {r['anomaly_type'] for r in rows if r['ground_truth']} <= {'price_spike', 'price_drop', 'volume_spike'}
+
+
+def test_evaluation_reports_detection_rate_by_type(market_data):
+    result = EvaluationService.evaluate_models(market_data, fraction=0.05, models=['lof'], n_runs=3, scenario='extended')
+    by_type = result['evaluation']['lof']['by_type']
+
+    assert result['metadata']['scenario'] == 'extended'
+    assert by_type and all(0 <= v['detection_rate'] <= 1 and v['events'] > 0 for v in by_type.values())
+
+
+def test_unknown_scenario_is_rejected(market_data):
+    with pytest.raises(ValueError, match="scenario"):
+        EvaluationService.inject_synthetic_anomalies(market_data, scenario='nope')

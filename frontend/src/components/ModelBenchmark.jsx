@@ -13,6 +13,74 @@ const formatWithStd = (val, std) => (std ? `${formatPercent(val)} ± ${formatPer
 // Macierz pomyłek to średnia na przebieg – liczby niecałkowite z jednym miejscem po przecinku
 const formatCount = (val) => (Number.isInteger(val) ? `${val}` : val.toFixed(1));
 
+// Kolejność kolumn w tabeli wykrywalności (pokazywane są tylko typy obecne w wynikach)
+const ANOMALY_TYPES = ['price_spike', 'price_drop', 'volume_spike', 'gap_reversal', 'drift', 'volatility_burst'];
+
+const ScenarioSwitch = ({ scenario, onChange, disabled, t }) => (
+    <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('benchmark.scenario.title')}</span>
+            <div className="flex bg-neutral-900 rounded-lg p-1 border border-neutral-700">
+                {['basic', 'extended'].map((s) => (
+                    <button
+                        key={s}
+                        onClick={() => onChange(s)}
+                        disabled={disabled}
+                        className={`px-3 py-1.5 text-xs font-bold rounded transition-all disabled:cursor-wait ${scenario === s ? 'bg-primary-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
+                    >
+                        {t(`benchmark.scenario.${s}`)}
+                    </button>
+                ))}
+            </div>
+        </div>
+        <p className="text-xs text-neutral-500 max-w-xl">{t(`benchmark.scenario.${scenario}Desc`)}</p>
+    </div>
+);
+
+// Wykrywalność zdarzeń według typu anomalii: wiersze = modele, kolumny = typy, kolor = odsetek wykrytych
+const DetectionByType = ({ modelsList, t }) => {
+    const types = ANOMALY_TYPES.filter((type) => modelsList.some((m) => m.byType[type]));
+    if (types.length === 0) return null;
+
+    return (
+        <div className="mt-10">
+            <h3 className="text-lg font-bold text-white">{t('benchmark.byType.title')}</h3>
+            <p className="text-xs text-neutral-400 mt-1 mb-4 max-w-3xl">{t('benchmark.byType.desc')}</p>
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-600 rounded-lg">
+                <table className="w-full text-left text-neutral-300 min-w-max">
+                    <thead className="bg-neutral-900">
+                        <tr className="border-b border-neutral-700">
+                            <th className="py-3 px-4 text-xs font-bold tracking-wider text-neutral-400 uppercase">{t('benchmark.table.model')}</th>
+                            {types.map((type) => (
+                                <th key={type} className="py-3 px-4 text-xs font-bold tracking-wider text-neutral-400 text-center cursor-help" title={t(`benchmark.types.${type}_desc`)}>
+                                    {t(`benchmark.types.${type}`)}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {modelsList.map((m) => (
+                            <tr key={m.key} className="border-b border-neutral-700">
+                                <td className="py-3 px-4 font-bold text-neutral-100 text-sm">{m.name}</td>
+                                {types.map((type) => {
+                                    const cell = m.byType[type];
+                                    return (
+                                        <td key={type} className="py-3 px-4 text-center text-sm font-bold text-white"
+                                            style={cell ? { backgroundColor: `rgba(20, 184, 166, ${0.1 + 0.6 * cell.detection_rate})` } : undefined}
+                                            title={cell ? `${cell.events} ${t('benchmark.byType.events')}` : undefined}>
+                                            {cell ? formatPercent(cell.detection_rate) : '—'}
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
 const StdLabel = ({ value }) => (
     value ? <span className="block text-[11px] font-medium text-neutral-500">± {formatPercent(value)}</span> : null
 );
@@ -46,7 +114,7 @@ const CustomTooltip = ({ active, payload, label, t }) => {
     return null;
 };
 
-const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBenchmark, onSelectModel }) => {
+const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, scenario, onScenarioChange, loading, onRunBenchmark, onSelectModel }) => {
     const { t } = useLanguage();
     const [primaryMetric, setPrimaryMetric] = useState('f1_score');
     const [sortConfig, setSortConfig] = useState({ key: 'f1_score', direction: 'desc' });
@@ -73,9 +141,12 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBe
                 <div className="bg-neutral-800 p-6 rounded-xl shadow-lg flex flex-col items-center justify-center min-h-[400px] border border-neutral-700 text-center">
                     <div className="text-5xl opacity-40 mb-6 drop-shadow-md">📊</div>
                     <h2 className="text-white font-bold text-2xl mb-3">{t('benchmark.empty.title')}</h2>
-                    <p className="text-neutral-400 mb-8 max-w-lg">
+                    <p className="text-neutral-400 mb-6 max-w-lg">
                         {t('benchmark.empty.desc')}
                     </p>
+                    <div className="mb-8 flex justify-center">
+                        <ScenarioSwitch scenario={scenario} onChange={onScenarioChange} disabled={loading} t={t} />
+                    </div>
                     <button
                         onClick={onRunBenchmark}
                         className="bg-primary-600 hover:bg-primary-500 text-white px-8 py-3 rounded-xl shadow-lg transition-all font-bold tracking-wide transform hover:scale-105"
@@ -99,6 +170,7 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBe
         f1_score: data.metrics?.f1_score || 0,
         std: data.metrics_std || {},
         cm: data.confusion_matrix || {},
+        byType: data.by_type || {},
         isError: false
     }));
 
@@ -118,7 +190,9 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBe
             [`${t('benchmark.table.tooltipTp')}`]: m.cm.true_positives || 0,
             [`${t('benchmark.table.tooltipFp')}`]: m.cm.false_positives || 0,
             [`${t('benchmark.table.tooltipTn')}`]: m.cm.true_negatives || 0,
-            [`${t('benchmark.table.tooltipFn')}`]: m.cm.false_negatives || 0
+            [`${t('benchmark.table.tooltipFn')}`]: m.cm.false_negatives || 0,
+            // Wykrywalność według typu anomalii (tylko typy obecne w scenariuszu)
+            ...Object.fromEntries(Object.entries(m.byType).map(([type, v]) => [t(`benchmark.types.${type}`), formatPercent(v.detection_rate)]))
         }));
         exportCSV(payload, 'models_benchmark.csv').catch((err) => console.error('Benchmark CSV export failed:', err));
     };
@@ -218,6 +292,9 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBe
                         {nRuns > 1 && (
                             <p className="text-xs mt-1 text-neutral-500">{t('benchmark.header.runsInfo').replace('{n}', nRuns)}</p>
                         )}
+                        <div className="mt-4">
+                            <ScenarioSwitch scenario={scenario} onChange={onScenarioChange} disabled={loading} t={t} />
+                        </div>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-3">
                         <div className="flex bg-neutral-900 rounded-lg p-1 border border-neutral-700">
@@ -360,6 +437,8 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBe
                         </tbody>
                     </table>
                 </div>
+
+                <DetectionByType modelsList={modelsList} t={t} />
             </div>
         </div>
     );

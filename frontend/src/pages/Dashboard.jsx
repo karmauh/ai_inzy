@@ -24,6 +24,8 @@ const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('analysis');
     const [benchmarkData, setBenchmarkData] = useState(null);
     const [loadingBenchmark, setLoadingBenchmark] = useState(false);
+    // Scenariusz benchmarku: 'basic' (duże, pojedyncze anomalie) lub 'extended' (realistyczne, także wielosesyjne)
+    const [benchmarkScenario, setBenchmarkScenario] = useState('basic');
     
     // Stan wyboru aktualnego modelu (powiązanie z Benchmarkiem)
     const [currentModel, setCurrentModel] = useState('isolation_forest');
@@ -133,6 +135,16 @@ const Dashboard = () => {
         }
     };
 
+    const handleScenarioChange = (scenario) => {
+        if (scenario === benchmarkScenario || loadingBenchmark) return;
+        setBenchmarkScenario(scenario);
+        // Wyniki są już widoczne – przeliczamy od razu; w pustym widoku tylko zmieniamy wybór
+        if (benchmarkData) {
+            setBenchmarkData(null);
+            handleRunBenchmark(scenario);
+        }
+    };
+
     const handleModeChange = (mode) => {
         if (mode === detectionMode || loadingAnalysis) return;
         setDetectionMode(mode);
@@ -141,13 +153,13 @@ const Dashboard = () => {
         runAnalysis(null, null, null, mode);
     };
 
-    const handleRunBenchmark = async () => {
+    const handleRunBenchmark = async (scenario = benchmarkScenario) => {
         setActiveTab('benchmark');
-        if (benchmarkData) return; // Unikamy podwójnego żądania
+        if (benchmarkData?.metadata?.scenario === scenario) return; // Unikamy podwójnego żądania
         
         setLoadingBenchmark(true);
         try {
-            const results = await evaluateModelsAPI(analysisResults, 0.05, undefined, detectionMode);
+            const results = await evaluateModelsAPI(analysisResults, 0.05, undefined, detectionMode, scenario);
             setBenchmarkData(results);
         } catch (err) {
             console.error("Benchmark failed:", err);
@@ -350,9 +362,11 @@ const Dashboard = () => {
                 <ModelBenchmark
                     evaluationData={benchmarkData?.evaluation}
                     detectionMode={detectionMode}
+                    scenario={benchmarkScenario}
+                    onScenarioChange={handleScenarioChange}
                     nRuns={benchmarkData?.metadata?.n_runs}
                     loading={loadingBenchmark}
-                    onRunBenchmark={handleRunBenchmark}
+                    onRunBenchmark={() => handleRunBenchmark()}
                     onSelectModel={(modelKey) => {
                         setActiveTab('analysis');
                         runAnalysis(null, null, modelKey);

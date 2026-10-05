@@ -65,12 +65,13 @@ export const fetchMarketData = async (symbol) => {
     return response.data;
 };
 
-export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'], mode = 'batch') => {
+export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'], mode = 'batch', scenario = 'basic') => {
     const response = await client.post('/evaluation/evaluate', {
         data,
         fraction,
         models,
-        mode
+        mode,
+        scenario
     });
     return response.data;
 };

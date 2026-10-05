@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 ModelType = Literal['isolation_forest', 'lof', 'ocsvm', 'autoencoder']
 Language = Literal['pl', 'en']
 DetectionMode = Literal['batch', 'walk_forward']
+Scenario = Literal['basic', 'extended']
 
 # Minimalna liczba sesji potrzebna, by modele (np. LOF) miały sensowne sąsiedztwo
 MIN_DATA_POINTS = 10
@@ -32,6 +33,8 @@ class EvaluateRequest(BaseModel):
     # Liczba powtórzeń ewaluacji z różnymi seedami (wynik: średnia ± odchylenie standardowe)
     n_runs: int = Field(default=10, ge=1, le=30)
     mode: DetectionMode = 'batch'
+    # Zestaw wstrzykiwanych anomalii: 'basic' (duże, pojedyncze) lub 'extended' (realistyczne, także wielosesyjne)
+    scenario: Scenario = 'basic'
     models: List[ModelType] = Field(
         default_factory=lambda: ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'],
         min_length=1,

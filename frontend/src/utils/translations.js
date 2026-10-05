@@ -85,6 +85,32 @@ export const translations = {
         autoencoder_name: "PyTorch Autoencoder",
         autoencoder_meta: "Sztuczna sieć głębokiego uczenia. Świece o wielkim stopniu skompresowanego błędu rekonstrukcji wyrzucane są jako anomalie."
       },
+      scenario: {
+        title: "Scenariusz anomalii",
+        basic: "Podstawowy",
+        extended: "Rozszerzony",
+        basicDesc: "Pojedyncze, bardzo duże skoki ceny i wolumenu (3 odchylenia standardowe poziomu ceny z całego okresu). Łatwe do wykrycia – dobre do szybkiego sprawdzenia modeli.",
+        extendedDesc: "Anomalie dopasowane do dziennej zmienności spółki, także rozłożone na kilka sesji: dryf ceny, wybuch zmienności, luka z powrotem. Trudniejsze i bliższe rzeczywistym zdarzeniom rynkowym."
+      },
+      byType: {
+        title: "Wykrywalność według typu anomalii",
+        desc: "Odsetek wstrzykniętych zdarzeń danego typu, które model wykrył (zdarzenie wielosesyjne jest wykryte, jeśli model oznaczył choć jedną z jego sesji). Najedź na nagłówek, aby zobaczyć opis typu.",
+        events: "zdarzeń we wszystkich przebiegach"
+      },
+      types: {
+        price_spike: "Skok ceny",
+        price_drop: "Spadek ceny",
+        volume_spike: "Skok wolumenu",
+        gap_reversal: "Luka z powrotem",
+        drift: "Dryf",
+        volatility_burst: "Wybuch zmienności",
+        price_spike_desc: "Jednodniowy, gwałtowny wzrost ceny zamknięcia.",
+        price_drop_desc: "Jednodniowy, gwałtowny spadek ceny zamknięcia.",
+        volume_spike_desc: "Jednodniowy, wielokrotny wzrost wolumenu obrotu przy zwykłej cenie.",
+        gap_reversal_desc: "Otwarcie daleko od poprzedniego zamknięcia, po czym cena wraca do normy w ciągu dnia (nietypowa świeca).",
+        drift_desc: "Pięć kolejnych sesji z umiarkowanym ruchem w tę samą stronę – żadna sesja osobno nie jest skrajna.",
+        volatility_burst_desc: "Pięć kolejnych sesji z mniej więcej dwukrotnie większą zmiennością i szerszym zakresem dnia."
+      },
       metrics: {
         precisionDesc: "Jak ufać alarmom? (Prawdziwe anomalie do sumy wszystkich ogłoszonych alarmów)",
         recallDesc: "Ile awarii wyłapał? (Wykryte anomalie do sumy faktycznych zaistniałych anomalii)",
@@ -227,6 +253,32 @@ export const translations = {
         ocsvm_meta: "Based on nonlinear decision boundaries; performs exceptionally well in high-dimensional spaces near normal points.",
         autoencoder_name: "PyTorch Autoencoder",
         autoencoder_meta: "Artificial deep learning network. Candles with massive compressed reconstruction error are flagged as anomalies."
+      },
+      scenario: {
+        title: "Anomaly scenario",
+        basic: "Basic",
+        extended: "Extended",
+        basicDesc: "Single, very large price and volume jumps (3 standard deviations of the price level over the whole period). Easy to detect – good for a quick model check.",
+        extendedDesc: "Anomalies scaled to the stock's daily volatility, including multi-session events: price drift, volatility burst, gap with reversal. Harder and closer to real market events."
+      },
+      byType: {
+        title: "Detection rate by anomaly type",
+        desc: "Share of injected events of each type detected by the model (a multi-session event counts as detected if the model flagged at least one of its sessions). Hover over a header to see the type description.",
+        events: "events across all runs"
+      },
+      types: {
+        price_spike: "Price spike",
+        price_drop: "Price drop",
+        volume_spike: "Volume spike",
+        gap_reversal: "Gap & reversal",
+        drift: "Drift",
+        volatility_burst: "Volatility burst",
+        price_spike_desc: "A sudden one-day jump in the closing price.",
+        price_drop_desc: "A sudden one-day drop in the closing price.",
+        volume_spike_desc: "A one-day multi-fold increase in trading volume at a normal price.",
+        gap_reversal_desc: "The session opens far from the previous close, then the price returns to normal during the day (unusual candle).",
+        drift_desc: "Five consecutive sessions with moderate moves in the same direction – no single session is extreme.",
+        volatility_burst_desc: "Five consecutive sessions with roughly doubled volatility and a wider daily range."
       },
       metrics: {
         precisionDesc: "How much to trust alerts? (True anomalies out of all declared alarms)",
