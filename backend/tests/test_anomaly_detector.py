@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 from app.services.anomaly_detector import AnomalyDetector
 import pandas as pd
@@ -29,7 +30,7 @@ def sample_data():
         for i in range(1, 21)
     ]
 
-@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder"])
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder", "ensemble"])
 def test_detect_anomalies_all_models(sample_data, model_type):
     # Dodajemy jeden punkt jako wyraźną anomalię (np. duży spadek wykraczający poza typowe wahania)
     outlier = sample_data[-1].copy()
@@ -63,7 +64,7 @@ def test_detect_anomalies_unsupported_model(sample_data):
         AnomalyDetector.detect_anomalies(sample_data, model_type="unsupported")
 
 
-@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "autoencoder"])
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "autoencoder", "ensemble"])
 def test_warmup_period_is_not_flagged_disproportionately(model_type):
     # Wskaźniki są puste w pierwszych ~50 sesjach; nie mogą one dominować wśród anomalii
     from tests.conftest import make_market_data
@@ -101,7 +102,7 @@ def test_signals_require_both_conditions_and_recent_dates(sample_data):
     assert results[0]['date'] == '2025-01-01'
 
 
-@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder"])
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder", "ensemble"])
 @pytest.mark.parametrize("contamination", [0.01, 0.05, 0.2])
 def test_all_models_flag_the_same_fraction(market_data, model_type, contamination):
     # Wspólny próg – porównanie precision/recall między modelami jest uczciwe
@@ -120,7 +121,7 @@ def test_flagged_points_have_highest_scores(market_data):
 
 # --- Tryb walk-forward (bez wglądu w przyszłość) ---
 
-@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder"])
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder", "ensemble"])
 def test_walk_forward_does_not_look_ahead(market_data, model_type):
     # Zmiana przyszłych notowań nie może zmienić oceny wcześniejszych sesji
     cut = 150
@@ -172,3 +173,20 @@ def test_autoencoder_flags_obvious_spike(mode):
     results = AnomalyDetector.detect_anomalies(data, model_type="autoencoder", contamination=0.05, mode=mode)
 
     assert results[spike]['is_anomaly']
+
+
+def test_ensemble_combines_all_base_models(market_data):
+    from app.services.anomaly_detector import ENSEMBLE_MEMBERS
+    with patch.object(AnomalyDetector, '_fit_score', wraps=AnomalyDetector._fit_score) as spy:
+        AnomalyDetector.detect_anomalies(market_data, model_type="ensemble")
+
+    called = [c.args[0] for c in spy.call_args_list]
+    assert called[0] == "ensemble"
+    assert sorted(called[1:]) == sorted(ENSEMBLE_MEMBERS)
+
+
+def test_robust_z_puts_models_on_common_scale():
+    reference = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    # Skala i przesunięcie wyników modelu nie mają znaczenia po normalizacji
+    assert np.allclose(AnomalyDetector._robust_z(reference, reference),
+                       AnomalyDetector._robust_z(reference * 100 + 7, reference * 100 + 7))

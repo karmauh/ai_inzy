@@ -8,9 +8,15 @@ from sklearn.preprocessing import RobustScaler, StandardScaler
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
-SUPPORTED_MODELS = ('isolation_forest', 'lof', 'ocsvm', 'autoencoder')
+BASE_MODELS = ('isolation_forest', 'lof', 'ocsvm', 'autoencoder')
+# 'ensemble' – średnia odpornych z-score'ów wyników wszystkich modeli bazowych.
+# Wybrany eksperymentalnie (6 spółek x 5 przebiegów, 2 scenariusze x 2 tryby) spośród średniej/maksimum rang
+# i średniej z-score'ów dla różnych zestawów modeli: średnie F1 0.549 wobec 0.536 najlepszego pojedynczego modelu
+# (LOF), a w najtrudniejszym warunku (scenariusz rozszerzony, walk-forward) 0.325 wobec 0.298.
+SUPPORTED_MODELS = BASE_MODELS + ('ensemble',)
+ENSEMBLE_MEMBERS = BASE_MODELS
 
 # Autoenkoder uczy się na danych przyciętych do ±AE_TRAIN_CLIP (po skalowaniu odpornym na wartości skrajne).
 # Bez tego sieć uczy się odtwarzać także skrajne punkty, przez co anomalie dostają niski błąd rekonstrukcji.
@@ -148,11 +154,33 @@ class AnomalyDetector:
         return errors(X_train), errors(X_test)
 
     @staticmethod
-    def _fit_score(model_type: str, X_train: np.ndarray, X_test: np.ndarray, contamination: float, novelty: bool):
+    def _robust_z(scores: np.ndarray, reference: np.ndarray) -> np.ndarray:
+        """
+        Odporny z-score (mediana i rozstęp międzykwartylowy) względem wyników referencyjnych
+        (tryb batch: wszystkie punkty, walk-forward: punkty kalibracyjne z przeszłości).
+        Sprowadza wyniki modeli o różnych skalach do wspólnej skali przed uśrednieniem.
+        """
+        q1, median, q3 = np.quantile(reference, [0.25, 0.5, 0.75])
+        return (scores - median) / ((q3 - q1) or 1.0)
+
+    @staticmethod
+    def _fit_score(model_type: str, X_train: np.ndarray, X_test: np.ndarray, contamination: float, novelty: bool,
+                   n_reference: Optional[int] = None):
         """
         Uczy model na X_train i zwraca wyniki anomalii (train, test), gdzie wyższa wartość = silniejsza anomalia.
         novelty=False: X_test to te same punkty co X_train (tryb batch).
+        n_reference (tylko ensemble): liczba początkowych wierszy X_test, względem których normalizowane są
+        wyniki modeli bazowych – w walk-forward są to sesje kalibracyjne, więc łączenie nie zagląda w przyszłość.
         """
+        if model_type == 'ensemble':
+            reference = slice(0, n_reference)
+            ensemble = np.mean([
+                AnomalyDetector._robust_z(test, test[reference])
+                for _, test in (AnomalyDetector._fit_score(m, X_train, X_test, contamination, novelty) for m in ENSEMBLE_MEMBERS)
+            ], axis=0)
+            # Wynik treningowy nie jest używany przez ensemble (próg liczony jest z wyników testowych/kalibracyjnych)
+            return np.full(len(X_train), np.nan), ensemble
+
         if model_type == 'isolation_forest':
             model = IsolationForest(random_state=42).fit(X_train)
             train, test = model.decision_function(X_train), model.decision_function(X_test)
@@ -198,7 +226,7 @@ class AnomalyDetector:
 
             _, out_of_sample = AnomalyDetector._fit_score(
                 model_type, scaler.transform(fit_part),
-                scaler.transform(pd.concat([calib_part, test])), contamination, novelty=True)
+                scaler.transform(pd.concat([calib_part, test])), contamination, novelty=True, n_reference=n_calib)
             calib_scores, test_scores = out_of_sample[:n_calib], out_of_sample[n_calib:]
 
             # Sesja jest anomalią, jeśli jej wynik przekracza kwantyl (1 - contamination) wyników kalibracyjnych

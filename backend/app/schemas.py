@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
-ModelType = Literal['isolation_forest', 'lof', 'ocsvm', 'autoencoder']
+ModelType = Literal['isolation_forest', 'lof', 'ocsvm', 'autoencoder', 'ensemble']
 Language = Literal['pl', 'en']
 DetectionMode = Literal['batch', 'walk_forward']
 Scenario = Literal['basic', 'extended']
@@ -36,7 +36,7 @@ class EvaluateRequest(BaseModel):
     # Zestaw wstrzykiwanych anomalii: 'basic' (duże, pojedyncze) lub 'extended' (realistyczne, także wielosesyjne)
     scenario: Scenario = 'basic'
     models: List[ModelType] = Field(
-        default_factory=lambda: ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'],
+        default_factory=lambda: ['isolation_forest', 'lof', 'ocsvm', 'autoencoder', 'ensemble'],
         min_length=1,
     )
 

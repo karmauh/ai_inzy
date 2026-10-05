@@ -26,11 +26,11 @@ export const translations = {
       loading: {
         title: "Inicjalizacja i weryfikacja algorytmów...",
         subtitle: "Wstrzykiwanie syntetycznych usterek. Modele głębokiego uczenia trenują struktury w locie!",
-        walkForward: "Tryb bez wglądu w przyszłość doucza modele kilkadziesiąt razy na przebieg – może to potrwać do ok. 15 sekund."
+        walkForward: "Tryb bez wglądu w przyszłość doucza modele kilkadziesiąt razy na przebieg – może to potrwać do ok. 20 sekund."
       },
       empty: {
         title: "Panel Ewaluacji Rozszerzonej Zablokowany",
-        desc: "Benchmark pozwala w kontrolowanych warunkach zasymulować kryzysy w oparciu o najnowszą historię giełdy i zmierzyć realną siłę każdego z 4 zaimplementowanych modeli uczenia w jednym wspólnym środowisku testowym.",
+        desc: "Benchmark pozwala w kontrolowanych warunkach zasymulować kryzysy w oparciu o najnowszą historię giełdy i zmierzyć realną siłę każdego z zaimplementowanych modeli (oraz ich połączenia) uczenia w jednym wspólnym środowisku testowym.",
         button: "Rozpocznij Mierzenie Osiągów"
       },
       header: {
@@ -83,7 +83,9 @@ export const translations = {
         ocsvm_name: "One-Class SVM",
         ocsvm_meta: "Opiera się na nieliniowej granicy decyzyjnej; bardzo dobrze odnajduje się w przestrzeniach wielowymiarowych wokół punktów normy.",
         autoencoder_name: "PyTorch Autoencoder",
-        autoencoder_meta: "Sztuczna sieć głębokiego uczenia. Świece o wielkim stopniu skompresowanego błędu rekonstrukcji wyrzucane są jako anomalie."
+        autoencoder_meta: "Sztuczna sieć głębokiego uczenia. Świece o wielkim stopniu skompresowanego błędu rekonstrukcji wyrzucane są jako anomalie.",
+        ensemble_name: "Ensemble (wszystkie modele)",
+        ensemble_meta: "Łączy wszystkie cztery modele: ich wyniki sprowadzane są do wspólnej skali (odporny z-score) i uśredniane. Najstabilniejszy – rzadko najlepszy na łatwych danych, ale nigdy wyraźnie słaby."
       },
       scenario: {
         title: "Scenariusz anomalii",
@@ -195,7 +197,7 @@ export const translations = {
       loading: {
         title: "Initializing and verifying algorithms...",
         subtitle: "Injecting synthetic anomalies. Deep learning models train structures on the fly!",
-        walkForward: "No look-ahead mode retrains models dozens of times per run – this may take up to ~15 seconds."
+        walkForward: "No look-ahead mode retrains models dozens of times per run – this may take up to ~20 seconds."
       },
       empty: {
         title: "Extended Evaluation Panel Locked",
@@ -252,7 +254,9 @@ export const translations = {
         ocsvm_name: "One-Class SVM",
         ocsvm_meta: "Based on nonlinear decision boundaries; performs exceptionally well in high-dimensional spaces near normal points.",
         autoencoder_name: "PyTorch Autoencoder",
-        autoencoder_meta: "Artificial deep learning network. Candles with massive compressed reconstruction error are flagged as anomalies."
+        autoencoder_meta: "Artificial deep learning network. Candles with massive compressed reconstruction error are flagged as anomalies.",
+        ensemble_name: "Ensemble (all models)",
+        ensemble_meta: "Combines all four models: their scores are put on a common scale (robust z-score) and averaged. The most stable – rarely the best on easy data, but never clearly weak."
       },
       scenario: {
         title: "Anomaly scenario",
