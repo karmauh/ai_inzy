@@ -61,3 +61,41 @@ def test_detect_anomalies_empty_data():
 def test_detect_anomalies_unsupported_model(sample_data):
     with pytest.raises(ValueError):
         AnomalyDetector.detect_anomalies(sample_data, model_type="unsupported")
+
+
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "autoencoder"])
+def test_warmup_period_is_not_flagged_disproportionately(model_type):
+    # Wskaźniki są puste w pierwszych ~50 sesjach; nie mogą one dominować wśród anomalii
+    from tests.conftest import make_market_data
+    flagged, flagged_early = 0, 0
+    for seed in range(3):
+        results = AnomalyDetector.detect_anomalies(make_market_data(seed=seed), model_type=model_type, contamination=0.05)
+        idx = [i for i, r in enumerate(results) if r['is_anomaly']]
+        flagged += len(idx)
+        flagged_early += sum(i < 50 for i in idx)
+
+    # 50/250 = 20% danych – dopuszczamy losowe odchylenie, ale nie 50%+ jak przy imputacji zerem
+    assert flagged_early / flagged < 0.35
+
+
+def test_autoencoder_is_deterministic(market_data):
+    first = AnomalyDetector.detect_anomalies(market_data, model_type="autoencoder")
+    second = AnomalyDetector.detect_anomalies(market_data, model_type="autoencoder")
+
+    assert [r['anomaly_score'] for r in first] == [r['anomaly_score'] for r in second]
+
+
+def test_signals_require_both_conditions_and_recent_dates(sample_data):
+    # Ostatnia sesja: RSI wykupione ORAZ cena nad górną wstęgą -> Sell
+    sample_data[-1].update({'rsi': 80, 'close': 200, 'bb_upper': 150})
+    # Przedostatnia: tylko RSI wykupione -> Hold
+    sample_data[-2].update({'rsi': 80})
+    # Bardzo stara sesja spełniająca warunki kupna -> wygaszona do Hold
+    sample_data[0].update({'date': '2025-01-01', 'rsi': 10, 'close': 50, 'bb_lower': 60})
+
+    results = AnomalyDetector.detect_anomalies(sample_data, model_type="isolation_forest")
+
+    assert results[-1]['signal'] == 'Sell'
+    assert results[-2]['signal'] == 'Hold'
+    assert results[0]['signal'] == 'Hold'
+    assert results[0]['date'] == '2025-01-01'

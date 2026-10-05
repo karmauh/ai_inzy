@@ -23,11 +23,11 @@ class DataProcessor:
         df['sma_20'] = df['close'].rolling(window=20).mean()
         df['sma_50'] = df['close'].rolling(window=50).mean()
         
-        # Wskaźnik siły względnej (RSI 14-dniowy)
+        # Wskaźnik siły względnej (RSI 14-dniowy, wygładzanie Wildera)
         delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        
+        gain = delta.clip(lower=0).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean()
+        loss = (-delta.clip(upper=0)).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean()
+
         rs = gain / loss
         df['rsi'] = 100 - (100 / (1 + rs))
         # Wskaźnik MACD i EMA

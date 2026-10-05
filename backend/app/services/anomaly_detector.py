@@ -9,6 +9,20 @@ import torch.nn as nn
 import torch.optim as optim
 from typing import List, Dict, Any
 
+SUPPORTED_MODELS = ('isolation_forest', 'lof', 'ocsvm', 'autoencoder')
+
+# Sygnały starsze niż tyle dni od ostatniej sesji są wygaszane do 'Hold'
+SIGNAL_LOOKBACK_DAYS = 60
+
+FEATURES = [
+    'returns', 'volatility', 'rsi', 'atr',
+    'return_1d', 'return_3d', 'return_7d',
+    'volume_change', 'volume_ratio',
+    'dist_to_ema20', 'bb_position', 'z_score_20', 'volatility_change',
+    'momentum_5d', 'drawdown', 'body', 'upper_shadow', 'lower_shadow'
+]
+
+
 class TabularAutoencoder(nn.Module):
     def __init__(self, input_dim: int):
         super(TabularAutoencoder, self).__init__()
@@ -29,15 +43,89 @@ class TabularAutoencoder(nn.Module):
         decoded = self.decoder(encoded)
         return decoded
 
+
 class AnomalyDetector:
+    @staticmethod
+    def build_features(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Buduje macierz cech dla modeli. Wszystkie cechy są względne (niezależne od skali ceny/wolumenu).
+        Braki z okresu rozgrzewki wskaźników (pierwsze ~20 sesji) uzupełniane są medianą cechy,
+        aby nie tworzyć sztucznych wartości skrajnych (np. RSI = 0), które modele uznałyby za anomalie.
+        """
+        close = df['close']
+        candle_scale = close.replace(0, np.nan)
+
+        feats = pd.DataFrame(index=df.index)
+        feats['returns'] = df['returns']
+        feats['volatility'] = df['volatility'] / candle_scale
+        feats['rsi'] = df['rsi']
+        feats['atr'] = df['atr'] / candle_scale
+
+        # Stopy zwrotu w różnych horyzontach
+        feats['return_1d'] = close.pct_change(1)
+        feats['return_3d'] = close.pct_change(3)
+        feats['return_7d'] = close.pct_change(7)
+
+        # Wolumen względem własnej średniej
+        feats['volume_change'] = df['volume'].pct_change(1)
+        feats['volume_ratio'] = df['volume'] / df['volume'].rolling(window=20).mean().replace(0, np.nan)
+
+        # Cechy odległościowe i pozycyjne (bezpieczne przed dzieleniem przez 0)
+        feats['dist_to_ema20'] = (close - df['ema_20']) / df['ema_20'].replace(0, np.nan)
+        bb_width = (df['bb_upper'] - df['bb_lower']).replace(0, np.nan)
+        feats['bb_position'] = (close - df['bb_lower']) / bb_width
+        rolling_std_20 = close.rolling(window=20).std().replace(0, np.nan)
+        feats['z_score_20'] = (close - df['sma_20']) / rolling_std_20
+        feats['volatility_change'] = df['volatility'].pct_change(1)
+
+        # Momentum, drawdown i struktura świec (znormalizowane ceną)
+        feats['momentum_5d'] = close.pct_change(5)
+        rolling_max = close.cummax()
+        feats['drawdown'] = (close - rolling_max) / rolling_max.replace(0, np.nan)
+        feats['body'] = (close - df['open']).abs() / candle_scale
+        feats['upper_shadow'] = (df['high'] - df[['open', 'close']].max(axis=1)) / candle_scale
+        feats['lower_shadow'] = (df[['open', 'close']].min(axis=1) - df['low']) / candle_scale
+
+        feats = feats.replace([np.inf, -np.inf], np.nan)
+        return feats.fillna(feats.median()).fillna(0)
+
+    @staticmethod
+    def _run_autoencoder(X_scaled: np.ndarray, contamination: float):
+        # Lokalny stan RNG – deterministyczne wyniki bez wpływu na globalny seed
+        with torch.random.fork_rng():
+            torch.manual_seed(42)
+            X_tensor = torch.FloatTensor(X_scaled)
+            autoencoder = TabularAutoencoder(X_tensor.shape[1])
+            criterion = nn.MSELoss(reduction='none')
+            optimizer = optim.Adam(autoencoder.parameters(), lr=0.01)
+
+            # Lekki wariant treningu online dostosowany do pracy wewnątrz API
+            for _ in range(100):
+                optimizer.zero_grad()
+                loss = criterion(autoencoder(X_tensor), X_tensor).mean()
+                loss.backward()
+                optimizer.step()
+
+            autoencoder.eval()
+            with torch.no_grad():
+                # Błąd rekonstrukcji każdej świecy uśredniony po cechach
+                errors = criterion(autoencoder(X_tensor), X_tensor).mean(dim=1).numpy()
+
+        threshold = np.percentile(errors, 100 * (1 - contamination))
+        # Konwencja sklearn: niższy score = bardziej anomalne, -1 = anomalia
+        return -errors, np.where(errors >= threshold, -1, 1)
+
     @staticmethod
     def detect_anomalies(data: List[Dict[str, Any]], model_type: str = 'isolation_forest', contamination: float = 0.05) -> List[Dict[str, Any]]:
         """
-        Wykrywa anomalie za pomocą wybranego modelu (Isolation Forest, LOF, OCSVM) na podstawie stóp zwrotu i zmienności.
+        Wykrywa anomalie za pomocą wybranego modelu (Isolation Forest, LOF, OCSVM, Autoencoder)
+        na podstawie względnych cech cenowych, wolumenowych i wskaźników technicznych.
         """
+        if model_type not in SUPPORTED_MODELS:
+            raise ValueError(f"Unsupported model_type: {model_type}")
         if not data:
             return []
-            
+
         df = pd.DataFrame(data)
 
         # Upewniamy się, że wszystkie wymagane kolumny techniczne istnieją (z bezpiecznymi wartościami domyślnymi)
@@ -57,153 +145,56 @@ class AnomalyDetector:
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # Cechy podstawowe: stopy zwrotu i zmienność wolumenu
-        df['return_1d'] = df['close'].pct_change(1)
-        df['return_3d'] = df['close'].pct_change(3)
-        df['return_7d'] = df['close'].pct_change(7)
-        
-        df['volume_change'] = df['volume'].pct_change(1)
-        df['volume_sma_20'] = df['volume'].rolling(window=20).mean()
-        
-        # Cechy odległościowe i pozycyjne (bezpieczne przed dzieleniem przez 0)
-        ema_20_safe = df['ema_20'].replace(0, np.nan)
-        df['dist_to_ema20'] = (df['close'] - df['ema_20']) / ema_20_safe
-        
-        bb_width = (df['bb_upper'] - df['bb_lower']).replace(0, np.nan)
-        df['bb_position'] = (df['close'] - df['bb_lower']) / bb_width
-        
-        rolling_std_20 = df['close'].rolling(window=20).std().replace(0, np.nan)
-        df['z_score_20'] = (df['close'] - df['sma_20']) / rolling_std_20
-        
-        df['volatility_change'] = df['volatility'].pct_change(1)
-        
-        # Cechy zaawansowane: momentum, drawdown, struktura świec
-        df['momentum_5d'] = df['close'] - df['close'].shift(5)
-        
-        rolling_max = df['close'].cummax()
-        df['drawdown'] = (df['close'] - rolling_max) / rolling_max.replace(0, np.nan)
-        
-        df['body'] = abs(df['close'] - df['open'])
-        df['upper_shadow'] = df['high'] - df[['open', 'close']].max(axis=1)
-        df['lower_shadow'] = df[['open', 'close']].min(axis=1) - df['low']
-        
-        # Dodanie wszystkich utworzonych cech do pipeline'u modeli
-        required_features = [
-            'returns', 'volatility', 'rsi', 'atr',
-            'return_1d', 'return_3d', 'return_7d',
-            'volume_change', 'volume_sma_20',
-            'dist_to_ema20', 'bb_position', 'z_score_20', 'volatility_change',
-            'momentum_5d', 'drawdown', 'body', 'upper_shadow', 'lower_shadow'
-        ]
-        
-        # Obsługa wartości skrajnych, a następnie uzupełnienie brakujących wartości powieleniem lub zerem
-        df.replace([np.inf, -np.inf], np.nan, inplace=True)
-        # Używamy ffill żeby ewentualnie przeciągnąć w dół, a resztę dociąć zerem
-        df_clean = df[required_features].ffill().fillna(0)
-        
+
         # Wspólne skalowanie danych dla wszystkich modeli (wymagane w OCSVM i LOF, przydatne opcjonalnie w IF)
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(df_clean)
-        
+        X_scaled = StandardScaler().fit_transform(AnomalyDetector.build_features(df)[FEATURES])
+
         if model_type == 'isolation_forest':
             model = IsolationForest(contamination=contamination, random_state=42)
             model.fit(X_scaled)
-            df['anomaly_score'] = model.decision_function(X_scaled)
-            df['is_anomaly'] = model.predict(X_scaled)
+            scores, labels = model.decision_function(X_scaled), model.predict(X_scaled)
         elif model_type == 'lof':
-            model = LocalOutlierFactor(contamination=contamination)
-            df['is_anomaly'] = model.fit_predict(X_scaled)
-            df['anomaly_score'] = model.negative_outlier_factor_
+            model = LocalOutlierFactor(n_neighbors=min(20, len(df) - 1), contamination=contamination)
+            labels = model.fit_predict(X_scaled)
+            scores = model.negative_outlier_factor_
         elif model_type == 'ocsvm':
-            nu = min(max(contamination, 0.01), 1.0)
-            model = OneClassSVM(nu=nu, gamma='scale')
+            model = OneClassSVM(nu=min(max(contamination, 0.01), 1.0), gamma='scale')
             model.fit(X_scaled)
-            df['anomaly_score'] = model.decision_function(X_scaled)
-            df['is_anomaly'] = model.predict(X_scaled)
-        elif model_type == 'autoencoder':
-            # Architektura tablicowa z użyciem Torch Tensor
-            X_tensor = torch.FloatTensor(X_scaled)
-            input_dim = X_tensor.shape[1]
-            
-            autoencoder = TabularAutoencoder(input_dim)
-            criterion = nn.MSELoss(reduction='none') 
-            optimizer = optim.Adam(autoencoder.parameters(), lr=0.01)
-            
-            # Lekki wariant treningu online dostosowany do pracy wewnatrz API
-            epochs = 100
-            for epoch in range(epochs):
-                optimizer.zero_grad()
-                outputs = autoencoder(X_tensor)
-                loss = criterion(outputs, X_tensor).mean() # Uczymy sie sredniego bledu
-                loss.backward()
-                optimizer.step()
-                
-            autoencoder.eval()
-            with torch.no_grad():
-                reconstructed = autoencoder(X_tensor)
-                # Obliczanie bledu rekonstrukcji kazdej swiecy per cecha
-                errors = criterion(reconstructed, X_tensor).mean(dim=1).numpy()
-                
-            # Konwencja w obiekcie wsprocesujacym zaklada odwrócenie znaku na koncu,
-            # wiec sztucznie mnozymy wynik autoenkodera przez -1 by w systemie 
-            # wyjsciowym z powrotem byc dodatnim rozkladem bledow.
-            df['anomaly_score'] = -errors
-            
-            # Wymuszenie binarnej flagi 1 / -1
-            threshold = np.percentile(errors, 100 * (1 - contamination))
-            df['is_anomaly'] = np.where(errors >= threshold, -1, 1)
+            scores, labels = model.decision_function(X_scaled), model.predict(X_scaled)
         else:
-            raise ValueError(f"Unsupported model_type: {model_type}")
-            
-        # Ujednolicenie skali score'a: modele zwracają mniejsze/ujemne wartości dla anomalii. 
+            scores, labels = AnomalyDetector._run_autoencoder(X_scaled, contamination)
+
+        # Ujednolicenie skali score'a: modele zwracają mniejsze/ujemne wartości dla anomalii.
         # Odwracamy znak, by większa wartość oznaczała "silniejszą" anomalię.
-        df['anomaly_score'] = -df['anomaly_score']
-        
-        # Wspólne mapowanie wyniku binarnego we wszystkich modelach: -1 (anomalia) -> True, 1 (norma) -> False
-        df['is_anomaly'] = df['is_anomaly'].apply(lambda x: True if x == -1 else False)
-        
-        # Generowanie sygnałów transakcyjnych na podstawie wskaźników (Strategia Konfluencji)
+        df['anomaly_score'] = -np.asarray(scores, dtype=float)
+        # Wspólne mapowanie wyniku binarnego: -1 (anomalia) -> True, 1 (norma) -> False
+        df['is_anomaly'] = np.asarray(labels) == -1
+
+        # Sygnały transakcyjne (strategia konfluencji – oba warunki muszą być spełnione):
+        # Kupno: RSI < 32 ORAZ cena poniżej dolnej wstęgi Bollingera
+        # Sprzedaż: RSI > 68 ORAZ cena powyżej górnej wstęgi Bollingera
         df['signal'] = 'Hold'
-        
-        # Sygnał Kupna: RSI < 32 i cena poniżej dolnej wstęgi Bollingera
-        buy_condition = (df['rsi'] < 32) & (df['close'] < df['bb_lower'])
-        
-        # Sygnał Sprzedaży: RSI > 68 lub cena powyżej górnej wstęgi Bollingera
-        sell_condition = (df['rsi'] > 68) & (df['close'] > df['bb_upper'])
-        
-        df.loc[buy_condition, 'signal'] = 'Buy'
-        df.loc[sell_condition, 'signal'] = 'Sell'
-        
-        # Filtrowanie dat: ograniczenie sygnałów 'Buy' do ostatnich 2 miesięcy
+        df.loc[(df['rsi'] < 32) & (df['close'] < df['bb_lower']), 'signal'] = 'Buy'
+        df.loc[(df['rsi'] > 68) & (df['close'] > df['bb_upper']), 'signal'] = 'Sell'
 
-        try:
-            if not pd.api.types.is_datetime64_any_dtype(df['date']):
-                df['date'] = pd.to_datetime(df['date'])
+        # Ograniczenie sygnałów do ostatnich SIGNAL_LOOKBACK_DAYS dni (sygnały historyczne nie są akcjonowalne)
+        if 'date' in df.columns:
+            dates = pd.to_datetime(df['date'], errors='coerce')
+            if dates.notna().any():
+                cutoff_date = dates.max() - pd.Timedelta(days=SIGNAL_LOOKBACK_DAYS)
+                df.loc[dates < cutoff_date, 'signal'] = 'Hold'
 
-            max_date = df['date'].max()
-            cutoff_date = max_date - pd.Timedelta(days=60)
-
-            mask_old = df['date'] < cutoff_date
-            df.loc[mask_old & (df['signal'] == 'Buy'), 'signal'] = 'Hold'
-
-        except (ValueError, KeyError, TypeError):
-            pass
-
-        # Wybór kolumn do zwrócenia (zgodnie ze schematem StockDataPoint)
+        # Wybór kolumn do zwrócenia
         valid_output_cols = [
-            'date', 'open', 'high', 'low', 'close', 'volume', 
-            'returns', 'volatility', 'sma_20', 'sma_50', 
-            'rsi', 'macd', 'macd_signal', 'ema_20', 'ema_50', 
+            'date', 'open', 'high', 'low', 'close', 'volume',
+            'returns', 'volatility', 'sma_20', 'sma_50',
+            'rsi', 'macd', 'macd_signal', 'ema_20', 'ema_50',
             'bb_upper', 'bb_lower', 'atr', 'anomaly_score', 'is_anomaly', 'signal'
         ]
         available_cols = [c for c in valid_output_cols if c in df.columns]
-        
-        # Zastąpienie wartości NaN/Inf dla poprawnej serializacji JSON
-        df_out = df[available_cols].replace([np.inf, -np.inf], np.nan)
-        
-        # Konwersja formatu daty na tekst przed zwrotem danych
-             
+
+        # Zastąpienie wartości NaN/Inf przez None dla poprawnej serializacji JSON
+        df_out = df[available_cols].replace([np.inf, -np.inf], np.nan).astype(object)
         df_out = df_out.where(pd.notnull(df_out), None)
-        
+
         return df_out.to_dict(orient='records')
