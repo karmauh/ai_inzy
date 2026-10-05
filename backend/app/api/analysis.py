@@ -18,7 +18,8 @@ def analyze_data(request: AnalyzeRequest):
     except ValueError as e:
         # Np. za mało danych dla trybu walk-forward
         raise HTTPException(status_code=400, detail=str(e))
-    assessment = LLMService.generate_assessment(results, request.ticker_info, request.language)
+    analysis = {"model_type": request.model_type, "mode": request.mode, "contamination": request.contamination}
+    assessment = LLMService.generate_assessment(results, request.ticker_info, request.language, analysis)
 
     return jsonable_encoder(sanitize_json({
         "results": results,
@@ -31,5 +32,6 @@ def generate_assessment(request: AssessmentRequest):
     """
     Generuje samą ocenę AI dla gotowych wyników analizy (np. po zmianie języka – bez ponownego uruchamiania modelu).
     """
-    assessment = LLMService.generate_assessment(request.results, request.ticker_info, request.language)
+    analysis = {"model_type": request.model_type, "mode": request.mode, "contamination": request.contamination}
+    assessment = LLMService.generate_assessment(request.results, request.ticker_info, request.language, analysis)
     return jsonable_encoder(sanitize_json(assessment))

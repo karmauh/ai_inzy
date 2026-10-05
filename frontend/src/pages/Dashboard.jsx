@@ -48,7 +48,7 @@ const Dashboard = () => {
 
         let cancelled = false;
         setLoadingAnalysis(true);
-        generateAssessment(analysisResults, tickerInfo, language)
+        generateAssessment(analysisResults, tickerInfo, language, settings)
             .then((result) => {
                 if (!cancelled) setAssessments((prev) => ({ ...prev, [language]: result }));
             })

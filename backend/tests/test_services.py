@@ -297,3 +297,52 @@ def test_csv_export_flattens_explanations():
 
     assert "volume_ratio=4.021 (z=+8.7)" in csv
     assert "[{" not in csv
+
+
+# --- Kontekst dla oceny AI ---
+
+def _with_anomalies(rows, indices, explanation=None):
+    rows = [dict(r, is_anomaly=False, explanation=None, signal='Hold') for r in rows]
+    for i in indices:
+        rows[i].update(is_anomaly=True, explanation=explanation or [
+            {"feature": "volume_ratio", "value": 4.0, "typical": 1.0, "z": 8.0},
+            {"feature": "return_1d", "value": -0.1, "typical": 0.0, "z": -6.0},
+        ])
+    return rows
+
+
+def test_market_context_describes_trend_and_recent_anomalies(market_data):
+    from app.services.llm_service import build_market_context
+    rows = _with_anomalies(market_data, [100, 230, 245])
+    context = build_market_context(rows, {"model_type": "lof", "mode": "walk_forward", "contamination": 0.05})
+
+    closes = [r['close'] for r in rows]
+    assert f"20 sesji {(closes[-1] / closes[-21] - 1) * 100:+.1f}%" in context
+    assert "Anomalie w ostatnich 30 sesjach: 2 (przy tej czułości oczekiwane ok. 1.5); w całym okresie: 3." in context
+    assert "Ostatnia anomalia: 4 sesji temu." in context
+    assert "wolumen vs średnia 20 sesji 4.0x (typowo 1.0x)" in context
+    assert "Local Outlier Factor" in context and "bez wglądu w przyszłość" in context
+    # Najnowsza anomalia jest opisana jako pierwsza, a anomalia sprzed >60 sesji nie jest opisywana
+    assert context.index(rows[245]['date']) < context.index(rows[230]['date'])
+    assert rows[100]['date'] not in context
+
+
+def test_market_context_handles_short_series_without_anomalies():
+    from app.services.llm_service import build_market_context
+    rows = [{"date": f"2026-01-{i:02d}", "close": 100 + i, "volume": None, "is_anomaly": False, "signal": "Hold"} for i in range(1, 11)]
+    context = build_market_context(rows)
+
+    assert "60 sesji brak danych" in context
+    assert "Anomalie w ostatnich 10 sesjach: 0; w całym okresie: 0." in context
+    assert "Zmienność" not in context  # za mało danych
+    assert "Brak sygnałów" in context
+
+
+@pytest.mark.parametrize("language,words", [("pl", "Kupuj / Trzymaj / Sprzedaj"), ("en", "Buy / Hold / Sell")])
+def test_prompt_contains_context_and_localized_recommendation_words(market_data, language, words):
+    rows = _with_anomalies(market_data, [240])
+    prompt = LLMService.build_prompt(rows, {"symbol": "TEST", "name": "Test"}, language, {"model_type": "ensemble", "mode": "batch", "contamination": 0.05})
+
+    assert "Kontekst z analizowanego okresu" in prompt
+    assert rows[240]['date'] in prompt
+    assert words in prompt

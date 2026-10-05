@@ -148,3 +148,15 @@ def test_evaluate_endpoint_rejects_unknown_scenario(request_payload):
     response = client.post("/api/v1/evaluation/evaluate", json={"data": request_payload["data"], "scenario": "nope"})
 
     assert response.status_code == 422
+
+
+@patch('app.services.llm_service.LLMService.generate_assessment')
+def test_analysis_settings_are_passed_to_assessment(mock_generate, request_payload):
+    mock_generate.return_value = {"sentiment": "Neutral", "recommendation": "Hold", "summary": "ok", "confidence": "Low"}
+    request_payload.update(model_type="lof", contamination=0.1)
+
+    client.post("/api/v1/analyze", json=request_payload)
+    client.post("/api/v1/assessment", json={"results": request_payload["data"], "model_type": "ocsvm", "mode": "batch", "contamination": 0.02})
+
+    assert mock_generate.call_args_list[0].args[3] == {"model_type": "lof", "mode": "batch", "contamination": 0.1}
+    assert mock_generate.call_args_list[1].args[3] == {"model_type": "ocsvm", "mode": "batch", "contamination": 0.02}

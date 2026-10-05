@@ -51,11 +51,13 @@ export const analyzeData = async (data, modelType = 'isolation_forest', contamin
     return response.data;
 };
 
-export const generateAssessment = async (results, tickerInfo = null, language = 'pl') => {
+export const generateAssessment = async (results, tickerInfo = null, language = 'pl', settings = null) => {
     const response = await client.post('/assessment', {
         results,
         ticker_info: tickerInfo,
-        language
+        language,
+        // Ustawienia, na których powstały wyniki – opisywane w kontekście dla modelu językowego
+        ...(settings && { model_type: settings.model, mode: settings.mode, contamination: settings.contamination })
     });
     return response.data;
 };

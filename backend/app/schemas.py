@@ -25,6 +25,10 @@ class AssessmentRequest(BaseModel):
     results: DataPoints = Field(min_length=1)
     ticker_info: Optional[Dict[str, Any]] = None
     language: Language = 'pl'
+    # Ustawienia, na których powstały wyniki – opisywane w kontekście dla modelu językowego
+    model_type: Optional[ModelType] = None
+    mode: Optional[DetectionMode] = None
+    contamination: Optional[float] = Field(default=None, gt=0, le=0.5)
 
 
 class EvaluateRequest(BaseModel):
