@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import StockChart from '../components/StockChart';
 import TechnicalCharts from '../components/TechnicalCharts';
 import TickerSearch from '../components/TickerSearch';
 import AssessmentPanel from '../components/AssessmentPanel';
 import ModelBenchmark from '../components/ModelBenchmark';
-import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI } from '../services/api';
+import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI, generateAssessment } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
 const Dashboard = () => {
@@ -14,18 +14,11 @@ const Dashboard = () => {
     const [tickerInfo, setTickerInfo] = useState(null);
     const [error, setError] = useState(null);
 
-    // Ponowna analiza po zmianie języka (jeśli dane są załadowane)
-    useEffect(() => {
-        if (analysisResults && tickerInfo) {
-            runAnalysis();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [language]);
-
-    // Stan danych i wyników analizy
+    // Stan danych i wyników analizy; oceny AI trzymane per język, by zmiana języka nie wymagała ponownej analizy
     const [analysisResults, setAnalysisResults] = useState(null);
-    const [assessment, setAssessment] = useState(null);
+    const [assessments, setAssessments] = useState({});
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+    const assessment = assessments[language] || null;
     
     // Stany dla Benchmarku Modeli
     const [activeTab, setActiveTab] = useState('analysis');
@@ -35,21 +28,53 @@ const Dashboard = () => {
     // Stan wyboru aktualnego modelu (powiązanie z Benchmarkiem)
     const [currentModel, setCurrentModel] = useState('isolation_forest');
 
+    // Po zmianie języka generujemy tylko brakującą ocenę AI (bez ponownego uruchamiania modelu ML)
+    useEffect(() => {
+        if (!analysisResults || assessments[language] || loadingAnalysis) return;
+
+        let cancelled = false;
+        setLoadingAnalysis(true);
+        generateAssessment(analysisResults, tickerInfo, language)
+            .then((result) => {
+                if (!cancelled) setAssessments((prev) => ({ ...prev, [language]: result }));
+            })
+            .catch((err) => {
+                console.error('Assessment failed:', err);
+                if (!cancelled) setError(t('dashboard.error'));
+            })
+            .finally(() => {
+                if (!cancelled) setLoadingAnalysis(false);
+            });
+
+        return () => { cancelled = true; };
+        // Reagujemy wyłącznie na zmianę języka; pozostałe wartości są odczytywane w momencie zmiany
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [language]);
+
     // Obsługa eksportu
+    const handleExport = async (exportFn) => {
+        try {
+            await exportFn();
+        } catch (err) {
+            console.error('Export failed:', err);
+            setError(t('dashboard.exportError'));
+        }
+    };
+
     const handleExportCSV = () => {
-        if (analysisResults) exportCSV(analysisResults);
+        if (analysisResults) handleExport(() => exportCSV(analysisResults));
     };
 
     const handleExportPDF = () => {
         if (analysisResults && assessment && tickerInfo) {
-            exportPDF(analysisResults, assessment, tickerInfo, language);
+            handleExport(() => exportPDF(analysisResults, assessment, tickerInfo, language));
         }
     };
 
     const handleSearch = async (symbol) => {
         setSearchLoading(true);
         setAnalysisResults(null);
-        setAssessment(null);
+        setAssessments({});
         setBenchmarkData(null);
         setActiveTab('analysis');
         setCurrentModel('isolation_forest');
@@ -67,8 +92,10 @@ const Dashboard = () => {
             console.error(err);
             if (err.response?.status === 404) {
                 setError(`${t('dashboard.notFound')} ${symbol.toUpperCase()}`);
+            } else if (err.response?.status === 502) {
+                setError(t('dashboard.providerError'));
             } else {
-                setError(t('dashboard.error') || "Wystąpił błąd");
+                setError(t('dashboard.error'));
             }
         } finally {
             setSearchLoading(false);
@@ -84,18 +111,19 @@ const Dashboard = () => {
         if (!points) return;
         
         setLoadingAnalysis(true);
+        setError(null);
         try {
             // Wywołanie API analizy anomalii i interpretacji AI
             const results = await analyzeData(points, modelToUse, 0.05, info, language);
             
             // Aktualizacja stanu wynikami z backendu
             setAnalysisResults(results.results);
-            setAssessment(results.assessment);
+            setAssessments({ [language]: results.assessment });
             if (modelOverride) setCurrentModel(modelOverride);
             
         } catch (err) {
             console.error("Analysis failed:", err);
-            setError(t('dashboard.error') || "Wystąpił błąd");
+            setError(t('dashboard.error'));
         } finally {
             setLoadingAnalysis(false);
         }
@@ -111,18 +139,15 @@ const Dashboard = () => {
             setBenchmarkData(results);
         } catch (err) {
             console.error("Benchmark failed:", err);
-            setError(t('dashboard.error') || "Wystąpił błąd podczas pobierania benchmarku");
+            setError(t('dashboard.error'));
         } finally {
             setLoadingBenchmark(false);
         }
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <header className="mb-8 text-center">
-                <h1 className="text-4xl font-bold text-primary-400 mb-2">StockGuard AI</h1>
-                <p className="text-neutral-400">Advanced Anomaly Detection & AI Interpretation</p>
-            </header>
+        <div>
+            <p className="mb-8 text-center text-neutral-400">{t('dashboard.subtitle')}</p>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                 {/* Kolumna: Wyszukiwanie i Akcje */}
@@ -171,7 +196,7 @@ const Dashboard = () => {
                 {/* Kolumna: Kontekst i informacje */}
                  <div className="lg:col-span-2 bg-neutral-800 p-6 rounded-xl shadow-2xl border border-neutral-700 flex flex-col h-full">
                     <div className="mb-6 border-b border-neutral-700 pb-4">
-                        <h2 className="text-xl font-bold text-white">Analysis Context</h2>
+                        <h2 className="text-xl font-bold text-white">{t('dashboard.analysisContext')}</h2>
                     </div>
 
                     <div className="flex-1 flex flex-col">
@@ -183,9 +208,11 @@ const Dashboard = () => {
                                             <h3 className="text-2xl font-black text-primary-400 leading-none mb-1">{tickerInfo.symbol}</h3>
                                             <p className="text-base font-semibold text-neutral-200">{tickerInfo.name}</p>
                                         </div>
-                                        <div className="bg-primary-500/20 text-primary-400 px-3 py-1 rounded-full text-xs font-bold border border-primary-500/40 uppercase">
-                                            {tickerInfo.sector}
-                                        </div>
+                                        {tickerInfo.sector && (
+                                            <div className="bg-primary-500/20 text-primary-400 px-3 py-1 rounded-full text-xs font-bold border border-primary-500/40 uppercase">
+                                                {tickerInfo.sector}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="h-px bg-neutral-600 w-full mb-4" />
                                     <p className="text-neutral-300 text-sm leading-relaxed max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-600 scrollbar-track-transparent pr-3 font-light">
@@ -257,16 +284,16 @@ const Dashboard = () => {
                                     <tr className="border-b border-neutral-600">
                                         <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.date')}</th>
                                         <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.close')}</th>
-                                        <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.features')}</th>
+                                        <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.score')}</th>
                                         <th className="py-3 px-4 text-neutral-200 font-semibold">{t('table.status')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {analysisResults.map((row, idx) => (
-                                        <tr key={idx} className={`border-b border-neutral-700 hover:bg-neutral-700/50 transition-colors ${row.is_anomaly ? 'bg-red-900/20' : ''}`}>
+                                    {analysisResults.map((row) => (
+                                        <tr key={row.date} className={`border-b border-neutral-700 hover:bg-neutral-700/50 transition-colors ${row.is_anomaly ? 'bg-red-900/20' : ''}`}>
                                             <td className="py-2 px-4">{row.date}</td>
                                             <td className="py-2 px-4">{typeof row.close === 'number' ? row.close.toFixed(2) : row.close}</td>
-                                            <td className="py-2 px-4">{row.anomaly_score.toFixed(4)}</td>
+                                            <td className="py-2 px-4">{typeof row.anomaly_score === 'number' ? row.anomaly_score.toFixed(4) : '—'}</td>
                                             <td className="py-2 px-4">
                                                 {row.is_anomaly ? (
                                                     <span className="text-red-400 font-bold flex items-center gap-1">

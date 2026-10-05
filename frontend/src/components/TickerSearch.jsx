@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
 const TickerSearch = ({ onSearch, loading }) => {
@@ -14,7 +14,7 @@ const TickerSearch = ({ onSearch, loading }) => {
 
     return (
         <div className="mb-4">
-            <h3 className="text-xs font-semibold mb-2 text-neutral-400 uppercase tracking-widest">Market Search</h3>
+            <h3 className="text-xs font-semibold mb-2 text-neutral-400 uppercase tracking-widest">{t('dashboard.marketSearch')}</h3>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <input
                     type="text"

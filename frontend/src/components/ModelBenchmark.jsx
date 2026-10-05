@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BarChart, Bar, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportCSV } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
 const formatPercent = (val) => `${(val * 100).toFixed(1)}%`;
+
+// Precision: teal, Recall: amber, F1: fiolet – każda metryka musi być odróżnialna na wykresie
+const F1_COLOR = '#a78bfa';
 
 const CustomTooltip = ({ active, payload, label, t }) => {
     if (active && payload && payload.length) {
@@ -72,10 +75,13 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
         );
     }
 
-    let modelsList = Object.entries(evaluationData).filter(([_, data]) => !data.error).map(([key, data]) => ({
+    // Tłumaczenie z wartością zastępczą, gdy klucz nie istnieje
+    const tOr = (key, fallback) => (t(key) !== key ? t(key) : fallback);
+
+    const modelsList = Object.entries(evaluationData).filter(([, data]) => !data.error).map(([key, data]) => ({
         key,
-        name: t(`benchmark.models.${key}_name`) !== `benchmark.models.${key}_name` ? t(`benchmark.models.${key}_name`) : key,
-        meta: t(`benchmark.models.${key}_meta`) !== `benchmark.models.${key}_meta` ? t(`benchmark.models.${key}_meta`) : '',
+        name: tOr(`benchmark.models.${key}_name`, key),
+        meta: tOr(`benchmark.models.${key}_meta`, ''),
         precision: data.metrics?.precision || 0,
         recall: data.metrics?.recall || 0,
         f1_score: data.metrics?.f1_score || 0,
@@ -83,9 +89,9 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
         isError: false
     }));
 
-    const errorModelsList = Object.entries(evaluationData).filter(([_, data]) => data.error).map(([key, data]) => ({
+    const errorModelsList = Object.entries(evaluationData).filter(([, data]) => data.error).map(([key, data]) => ({
         key,
-        name: t(`benchmark.models.${key}_name`) !== `benchmark.models.${key}_name` ? t(`benchmark.models.${key}_name`) : key,
+        name: tOr(`benchmark.models.${key}_name`, key),
         error: data.error,
         isError: true
     }));
@@ -101,7 +107,7 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
             [`${t('benchmark.table.tooltipTn')}`]: m.cm.true_negatives || 0,
             [`${t('benchmark.table.tooltipFn')}`]: m.cm.false_negatives || 0
         }));
-        exportCSV(payload);
+        exportCSV(payload, 'models_benchmark.csv').catch((err) => console.error('Benchmark CSV export failed:', err));
     };
 
     const handleSort = (key) => {
@@ -216,7 +222,7 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
                 <div className="h-[430px] mb-10 bg-neutral-700/30 p-6 rounded-xl border border-neutral-700">
                     <ResponsiveContainer width="100%" height="100%">
                         {chartType === 'bar' ? (
-                            <BarChart data={chartData.reverse()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <BarChart data={[...chartData].reverse()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} vertical={false} />
                                 <XAxis dataKey="name" stroke="#9ca3af" tick={{ fill: '#e5e7eb', fontWeight: 600 }} tickLine={false} axisLine={{ stroke: '#4b5563' }}/>
                                 <YAxis stroke="#9ca3af" tickFormatter={formatPercent} tickLine={false} axisLine={{ stroke: '#4b5563' }} domain={[0, 1]} />
@@ -224,7 +230,7 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
                                 <Legend wrapperStyle={{ color: '#9ca3af', paddingTop: '20px' }} iconType="circle" />
                                 <Bar dataKey="precision" name="Precision" fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={30} />
                                 <Bar dataKey="recall" name="Recall" fill="#fbbf24" radius={[6, 6, 0, 0]} barSize={30} />
-                                <Bar dataKey="f1_score" name="F1 Score" fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={30} />
+                                <Bar dataKey="f1_score" name="F1 Score" fill={F1_COLOR} radius={[6, 6, 0, 0]} barSize={30} />
                             </BarChart>
                         ) : (
                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
@@ -233,7 +239,7 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
                                 <PolarRadiusAxis angle={30} domain={[0, 1]} tickFormatter={formatPercent} tick={{ fill: '#9ca3af' }} />
                                 <Radar name="Precision" dataKey="precision" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.3} />
                                 <Radar name="Recall" dataKey="recall" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.3} />
-                                <Radar name="F1 Score" dataKey="f1_score" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.3} />
+                                <Radar name="F1 Score" dataKey="f1_score" stroke={F1_COLOR} fill={F1_COLOR} fillOpacity={0.3} />
                                 <Legend wrapperStyle={{ color: '#9ca3af', paddingTop: '20px' }} iconType="circle" />
                                 <Tooltip content={<CustomTooltip t={t} />} />
                             </RadarChart>

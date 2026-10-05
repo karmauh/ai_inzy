@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   LineChart,
   Line,
@@ -11,8 +10,10 @@ import {
   Area,
   ComposedChart
 } from 'recharts';
+import { useLanguage } from '../context/LanguageContext';
 
 const TechnicalCharts = ({ data }) => {
+  const { t } = useLanguage();
   if (!data || data.length === 0) return null;
 
   return (
@@ -53,7 +54,7 @@ const TechnicalCharts = ({ data }) => {
               />
               <ReferenceLine y={0} stroke="#6b7280" />
               <Line type="monotone" dataKey="macd" stroke="#14b8a6" dot={false} strokeWidth={2} name="MACD" />
-              <Line type="monotone" dataKey="macd_signal" stroke="#fbbf24" dot={false} strokeWidth={2} name="Signal" />
+              <Line type="monotone" dataKey="macd_signal" stroke="#fbbf24" dot={false} strokeWidth={2} name={t('charts.signalLine')} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -61,7 +62,7 @@ const TechnicalCharts = ({ data }) => {
 
       {/* 3. Wstęgi Bollingera i EMA */}
       <div className="bg-neutral-800 p-6 rounded-lg shadow-lg">
-        <h3 className="text-lg font-bold mb-4 text-primary-400">Bollinger Bands & EMA</h3>
+        <h3 className="text-lg font-bold mb-4 text-primary-400">{t('charts.bollingerTitle')}</h3>
         <div className="h-[250px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data}>
@@ -75,11 +76,11 @@ const TechnicalCharts = ({ data }) => {
               />
               <Area type="monotone" dataKey="bb_upper" stroke="none" fill="#14b8a6" fillOpacity={0.1} />
               <Area type="monotone" dataKey="bb_lower" stroke="none" fill="#14b8a6" fillOpacity={0.1} />
-              <Line type="monotone" dataKey="close" stroke="#ffffff" dot={false} strokeWidth={1} name="Price" />
+              <Line type="monotone" dataKey="close" stroke="#ffffff" dot={false} strokeWidth={1} name={t('charts.price')} />
               <Line type="monotone" dataKey="ema_20" stroke="#fbbf24" dot={false} strokeWidth={1} name="EMA 20" />
               <Line type="monotone" dataKey="ema_50" stroke="#f472b6" dot={false} strokeWidth={1} name="EMA 50" />
-              <Line type="monotone" dataKey="bb_upper" stroke="#14b8a6" dot={false} strokeWidth={1} strokeDasharray="2 2" name="BB Upper" />
-              <Line type="monotone" dataKey="bb_lower" stroke="#14b8a6" dot={false} strokeWidth={1} strokeDasharray="2 2" name="BB Lower" />
+              <Line type="monotone" dataKey="bb_upper" stroke="#14b8a6" dot={false} strokeWidth={1} strokeDasharray="2 2" name={t('charts.bbUpper')} />
+              <Line type="monotone" dataKey="bb_lower" stroke="#14b8a6" dot={false} strokeWidth={1} strokeDasharray="2 2" name={t('charts.bbLower')} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -87,7 +88,7 @@ const TechnicalCharts = ({ data }) => {
 
       {/* 4. ATR / Zmienność */}
       <div className="bg-neutral-800 p-6 rounded-lg shadow-lg">
-        <h3 className="text-lg font-bold mb-4 text-primary-400">Volatility (ATR & StdDev)</h3>
+        <h3 className="text-lg font-bold mb-4 text-primary-400">{t('charts.volatilityTitle')}</h3>
         <div className="h-[250px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>

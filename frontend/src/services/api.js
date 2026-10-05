@@ -2,14 +2,14 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
-const scale = axios.create({
+const client = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-const downloadFile = async (response, filename) => {
+const downloadFile = (response, filename) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -17,17 +17,18 @@ const downloadFile = async (response, filename) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 };
 
-export const exportCSV = async (data) => {
-    const response = await scale.post('/export/csv', data, {
+export const exportCSV = async (data, filename = 'stock_data.csv') => {
+    const response = await client.post('/export/csv', data, {
         responseType: 'blob'
     });
-    downloadFile(response, 'stock_data.csv');
+    downloadFile(response, filename);
 };
 
 export const exportPDF = async (data, assessment, tickerInfo, language) => {
-    const response = await scale.post('/export/pdf', {
+    const response = await client.post('/export/pdf', {
         data,
         assessment,
         ticker_info: tickerInfo,
@@ -35,11 +36,11 @@ export const exportPDF = async (data, assessment, tickerInfo, language) => {
     }, {
         responseType: 'blob'
     });
-    downloadFile(response, 'analysis_report.pdf');
+    downloadFile(response, `analysis_report_${language}.pdf`);
 };
 
 export const analyzeData = async (data, modelType = 'isolation_forest', contamination = 0.05, tickerInfo = null, language = 'pl') => {
-    const response = await scale.post('/analyze', {
+    const response = await client.post('/analyze', {
         data,
         model_type: modelType,
         contamination,
@@ -49,13 +50,22 @@ export const analyzeData = async (data, modelType = 'isolation_forest', contamin
     return response.data;
 };
 
+export const generateAssessment = async (results, tickerInfo = null, language = 'pl') => {
+    const response = await client.post('/assessment', {
+        results,
+        ticker_info: tickerInfo,
+        language
+    });
+    return response.data;
+};
+
 export const fetchMarketData = async (symbol) => {
-    const response = await scale.get(`/market/data/${symbol}`);
+    const response = await client.get(`/market/data/${encodeURIComponent(symbol)}`);
     return response.data;
 };
 
 export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder']) => {
-    const response = await scale.post('/evaluation/evaluate', {
+    const response = await client.post('/evaluation/evaluate', {
         data,
         fraction,
         models
@@ -63,4 +73,4 @@ export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolat
     return response.data;
 };
 
-export default scale;
+export default client;

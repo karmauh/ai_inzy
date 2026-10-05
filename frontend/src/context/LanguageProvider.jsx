@@ -1,22 +1,31 @@
-import React, { useState } from 'react';
-import { translations } from '../utils/translations';
+import { useEffect, useState } from 'react';
+import { translate, translations } from '../utils/translations';
 import LanguageContext from './LanguageContext';
 
-export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('pl');
+const STORAGE_KEY = 'stockguard.language';
 
-  const t = (key) => {
-    if (!translations || !language) return key;
-    const keys = key.split('.');
-    let value = translations[language];
-    if (!value) return key;
-    
-    for (const k of keys) {
-      if (!value) break;
-      value = value[k];
+const readStoredLanguage = () => {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored in translations ? stored : 'pl';
+  } catch {
+    return 'pl';
+  }
+};
+
+export const LanguageProvider = ({ children }) => {
+  const [language, setLanguage] = useState(readStoredLanguage);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, language);
+    } catch {
+      // Brak dostępu do localStorage (np. tryb prywatny) – język nie zostanie zapamiętany
     }
-    return value || key;
-  };
+  }, [language]);
+
+  const t = (key) => translate(language, key);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>

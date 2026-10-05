@@ -12,6 +12,11 @@ export const translations = {
       selectPrompt: "Wyszukaj ticker, aby rozpocząć analizę.",
       notFound: "Nie znaleziono danych dla symbolu",
       error: "Wystąpił błąd",
+      providerError: "Źródło danych rynkowych jest chwilowo niedostępne. Spróbuj ponownie za chwilę.",
+      exportError: "Nie udało się wygenerować pliku do pobrania.",
+      subtitle: "Zaawansowana detekcja anomalii i interpretacja AI",
+      marketSearch: "Wyszukiwanie rynku",
+      analysisContext: "Kontekst analizy",
     },
     benchmark: {
       tabs: {
@@ -28,7 +33,7 @@ export const translations = {
         button: "Rozpocznij Mierzenie Osiągów"
       },
       header: {
-        title: "Models Benchmark Performance",
+        title: "Wydajność Modeli – Benchmark",
         subtitle: "Głęboka weryfikacja detektorów przed środowiskiem produkcyjnym.",
         barChart: "Wykres Słupkowy",
         radarChart: "Wykres Radarowy",
@@ -91,6 +96,14 @@ export const translations = {
       closePrice: "Cena Zamknięcia",
       anomaly: "Anomalia",
       buySignal: "Sygnał Kupna",
+      sellSignal: "Sygnał Sprzedaży",
+      noData: "Brak danych do wyświetlenia",
+      price: "Cena",
+      signalLine: "Linia sygnału",
+      bollingerTitle: "Wstęgi Bollingera i EMA",
+      volatilityTitle: "Zmienność (ATR i odch. std.)",
+      bbUpper: "Górna wstęga",
+      bbLower: "Dolna wstęga",
     },
     assessment: {
       title: "Ocena Rynku AI",
@@ -98,12 +111,23 @@ export const translations = {
       recommendation: "Rekomendacja",
       confidence: "Pewność",
       summary: "Podsumowanie Analizy",
+      values: {
+        Bullish: "Byczy",
+        Bearish: "Niedźwiedzi",
+        Neutral: "Neutralny",
+        Buy: "Kupuj",
+        Sell: "Sprzedaj",
+        Hold: "Trzymaj",
+        High: "Wysoka",
+        Medium: "Średnia",
+        Low: "Niska",
+      },
     },
     table: {
       title: "Szczegółowe Dane",
       date: "Data",
       close: "Cena",
-      features: "Cechy (Zwrot/Zmienność)",
+      score: "Wynik anomalii",
       status: "Status",
       anomaly: "ANOMALIA",
       normal: "Normalny",
@@ -122,6 +146,11 @@ export const translations = {
       selectPrompt: "Search for a ticker to begin analysis.",
       notFound: "No data found for symbol",
       error: "An error occurred",
+      providerError: "The market data provider is temporarily unavailable. Please try again shortly.",
+      exportError: "Failed to generate the download file.",
+      subtitle: "Advanced Anomaly Detection & AI Interpretation",
+      marketSearch: "Market Search",
+      analysisContext: "Analysis Context",
     },
     benchmark: {
       tabs: {
@@ -201,6 +230,14 @@ export const translations = {
       closePrice: "Close Price",
       anomaly: "Anomaly",
       buySignal: "Buy Signal",
+      sellSignal: "Sell Signal",
+      noData: "No data to display",
+      price: "Price",
+      signalLine: "Signal",
+      bollingerTitle: "Bollinger Bands & EMA",
+      volatilityTitle: "Volatility (ATR & StdDev)",
+      bbUpper: "BB Upper",
+      bbLower: "BB Lower",
     },
     assessment: {
       title: "AI Market Assessment",
@@ -208,15 +245,36 @@ export const translations = {
       recommendation: "Recommendation",
       confidence: "Confidence",
       summary: "Analysis Summary",
+      values: {
+        Bullish: "Bullish",
+        Bearish: "Bearish",
+        Neutral: "Neutral",
+        Buy: "Buy",
+        Sell: "Sell",
+        Hold: "Hold",
+        High: "High",
+        Medium: "Medium",
+        Low: "Low",
+      },
     },
     table: {
       title: "Detailed Data",
       date: "Date",
       close: "Close",
-      features: "Features (Return/Vol)",
+      score: "Anomaly Score",
       status: "Status",
       anomaly: "ANOMALY",
       normal: "Normal",
     }
   }
+};
+
+// Zwraca tłumaczenie dla klucza w notacji kropkowej (np. 'dashboard.error') lub sam klucz, gdy go brak
+export const translate = (language, key) => {
+  let value = translations[language];
+  for (const k of key.split('.')) {
+    if (value == null) break;
+    value = value[k];
+  }
+  return typeof value === 'string' ? value : key;
 };

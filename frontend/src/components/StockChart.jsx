@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   ComposedChart,
   Line,
@@ -12,26 +11,28 @@ import {
 } from 'recharts';
 import { useLanguage } from '../context/LanguageContext';
 
+// Strzałka sygnału: kupno pod ceną (w górę), sprzedaż nad ceną (w dół)
+const SignalArrow = ({ cx, cy, direction, color }) => {
+  if (cx == null || cy == null) return null;
+  const up = direction === 'up';
+  return (
+    <svg x={cx - 10} y={up ? cy + 10 : cy - 30} width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5"></line>
+      <polyline points={up ? '5 12 12 5 19 12' : '5 12 12 19 19 12'}></polyline>
+    </svg>
+  );
+};
+
 const StockChart = ({ data }) => {
   const { t } = useLanguage();
-  if (!data || data.length === 0) return <p className="text-center text-neutral-400">No data to display</p>;
+  if (!data || data.length === 0) return <p className="text-center text-neutral-400">{t('charts.noData')}</p>;
 
   const formattedData = data.map(item => ({
     ...item,
     anomalyVal: item.is_anomaly ? item.close : null,
-    buySignalVal: item.signal === 'Buy' ? item.close : null
+    buySignalVal: item.signal === 'Buy' ? item.close : null,
+    sellSignalVal: item.signal === 'Sell' ? item.close : null
   }));
-
-  const CustomArrow = (props) => {
-    const { cx, cy } = props;
-    if (!cx || !cy) return null;
-    return (
-      <svg x={cx - 10} y={cy + 10} width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="19" x2="12" y2="5"></line>
-        <polyline points="5 12 12 5 19 12"></polyline>
-      </svg>
-    );
-  };
 
   return (
     <div className="w-full h-[400px] bg-neutral-800 p-4 rounded-lg shadow-lg">
@@ -84,9 +85,17 @@ const StockChart = ({ data }) => {
           <Scatter
             name={t('charts.buySignal')}
             dataKey="buySignalVal"
-            shape={<CustomArrow />}
+            shape={<SignalArrow direction="up" color="#14b8a6" />}
             legendType="triangle"
             fill="#14b8a6"
+          />
+
+          <Scatter
+            name={t('charts.sellSignal')}
+            dataKey="sellSignalVal"
+            shape={<SignalArrow direction="down" color="#f97316" />}
+            legendType="triangle"
+            fill="#f97316"
           />
         </ComposedChart>
       </ResponsiveContainer>

@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -62,7 +62,8 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="p-8 text-white bg-red-900 min-h-screen">
-          <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
+          {/* ErrorBoundary działa poza LanguageProvider, stąd komunikat w obu językach */}
+          <h1 className="text-2xl font-bold mb-4">Coś poszło nie tak / Something went wrong.</h1>
           <pre className="bg-neutral-900 p-4 rounded overflow-auto text-neutral-300">
             {this.state.error && this.state.error.toString()}
             <br />

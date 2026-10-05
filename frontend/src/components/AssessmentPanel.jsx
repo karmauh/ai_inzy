@@ -1,20 +1,15 @@
-import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
 const AssessmentPanel = ({ assessment }) => {
     const { t } = useLanguage();
     if (!assessment) return null;
 
-    const { sentiment, recommendation, summary, confidence } = assessment;
+    // Backend zwraca wartości kanoniczne (EN): Bullish/Bearish/Neutral, Buy/Hold/Sell, High/Medium/Low
+    const { sentiment = 'Neutral', recommendation = 'Hold', summary, confidence = 'Low' } = assessment;
+    const label = (value) => t(`assessment.values.${value}`) === `assessment.values.${value}` ? value : t(`assessment.values.${value}`);
 
-    let sentimentColor = 'text-neutral-400';
-    if (sentiment.includes('Bullish')) sentimentColor = 'text-emerald-400';
-    if (sentiment.includes('Bearish')) sentimentColor = 'text-red-400';
-
-    // Kolory dla rekomendacji
-    let recColor = 'bg-neutral-600';
-    if (recommendation === 'Buy' || recommendation === 'Kupuj') recColor = 'bg-emerald-600';
-    if (recommendation === 'Sell' || recommendation === 'Sprzedaj') recColor = 'bg-red-600';
+    const sentimentColor = { Bullish: 'text-emerald-400', Bearish: 'text-red-400' }[sentiment] || 'text-neutral-400';
+    const recColor = { Buy: 'bg-emerald-600', Sell: 'bg-red-600' }[recommendation] || 'bg-neutral-600';
 
     const renderSummary = (text) => {
         if (!text) return null;
@@ -46,19 +41,19 @@ const AssessmentPanel = ({ assessment }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-6">
                 <div className="bg-neutral-700 p-4 rounded-lg text-center">
                     <p className="text-sm text-neutral-400 uppercase tracking-wider mb-1">{t('assessment.sentiment')}</p>
-                    <p className={`text-xl font-bold ${sentimentColor}`}>{sentiment}</p>
+                    <p className={`text-xl font-bold ${sentimentColor}`}>{label(sentiment)}</p>
                 </div>
 
                 <div className="bg-neutral-700 p-4 rounded-lg text-center">
                     <p className="text-sm text-neutral-400 uppercase tracking-wider mb-1">{t('assessment.recommendation')}</p>
                     <span className={`inline-block px-4 py-1 rounded-full text-white font-bold text-lg ${recColor}`}>
-                        {recommendation}
+                        {label(recommendation)}
                     </span>
                 </div>
 
                 <div className="bg-neutral-700 p-4 rounded-lg text-center">
                     <p className="text-sm text-neutral-400 uppercase tracking-wider mb-1">{t('assessment.confidence')}</p>
-                    <p className="text-xl font-bold text-primary-400">{confidence}</p>
+                    <p className="text-xl font-bold text-primary-400">{label(confidence)}</p>
                 </div>
             </div>
 
