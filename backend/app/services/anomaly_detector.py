@@ -90,7 +90,7 @@ class AnomalyDetector:
         return feats.fillna(feats.median()).fillna(0)
 
     @staticmethod
-    def _run_autoencoder(X_scaled: np.ndarray, contamination: float):
+    def _run_autoencoder(X_scaled: np.ndarray) -> np.ndarray:
         # Lokalny stan RNG – deterministyczne wyniki bez wpływu na globalny seed
         with torch.random.fork_rng():
             torch.manual_seed(42)
@@ -111,9 +111,21 @@ class AnomalyDetector:
                 # Błąd rekonstrukcji każdej świecy uśredniony po cechach
                 errors = criterion(autoencoder(X_tensor), X_tensor).mean(dim=1).numpy()
 
-        threshold = np.percentile(errors, 100 * (1 - contamination))
-        # Konwencja sklearn: niższy score = bardziej anomalne, -1 = anomalia
-        return -errors, np.where(errors >= threshold, -1, 1)
+        # Konwencja sklearn: niższy score = bardziej anomalne
+        return -errors
+
+    @staticmethod
+    def flag_top_fraction(scores: np.ndarray, contamination: float) -> np.ndarray:
+        """
+        Oznacza jako anomalie dokładnie ceil(contamination * n) punktów o najwyższym wyniku.
+        Wspólny próg dla wszystkich modeli – bez tego np. One-Class SVM (parametr nu jest tylko
+        przybliżeniem) oznaczał więcej punktów niż pozostałe modele, co zaburzało porównanie.
+        """
+        n_flagged = min(len(scores), max(1, int(np.ceil(contamination * len(scores)))))
+        flags = np.zeros(len(scores), dtype=bool)
+        # Sortowanie stabilne: przy remisach wygrywa wcześniejszy punkt, liczba oznaczeń jest stała
+        flags[np.argsort(-scores, kind='stable')[:n_flagged]] = True
+        return flags
 
     @staticmethod
     def detect_anomalies(data: List[Dict[str, Any]], model_type: str = 'isolation_forest', contamination: float = 0.05) -> List[Dict[str, Any]]:
@@ -150,25 +162,22 @@ class AnomalyDetector:
         X_scaled = StandardScaler().fit_transform(AnomalyDetector.build_features(df)[FEATURES])
 
         if model_type == 'isolation_forest':
-            model = IsolationForest(contamination=contamination, random_state=42)
-            model.fit(X_scaled)
-            scores, labels = model.decision_function(X_scaled), model.predict(X_scaled)
+            model = IsolationForest(random_state=42)
+            scores = model.fit(X_scaled).decision_function(X_scaled)
         elif model_type == 'lof':
-            model = LocalOutlierFactor(n_neighbors=min(20, len(df) - 1), contamination=contamination)
-            labels = model.fit_predict(X_scaled)
+            model = LocalOutlierFactor(n_neighbors=min(20, len(df) - 1))
+            model.fit(X_scaled)
             scores = model.negative_outlier_factor_
         elif model_type == 'ocsvm':
             model = OneClassSVM(nu=min(max(contamination, 0.01), 1.0), gamma='scale')
-            model.fit(X_scaled)
-            scores, labels = model.decision_function(X_scaled), model.predict(X_scaled)
+            scores = model.fit(X_scaled).decision_function(X_scaled)
         else:
-            scores, labels = AnomalyDetector._run_autoencoder(X_scaled, contamination)
+            scores = AnomalyDetector._run_autoencoder(X_scaled)
 
         # Ujednolicenie skali score'a: modele zwracają mniejsze/ujemne wartości dla anomalii.
         # Odwracamy znak, by większa wartość oznaczała "silniejszą" anomalię.
         df['anomaly_score'] = -np.asarray(scores, dtype=float)
-        # Wspólne mapowanie wyniku binarnego: -1 (anomalia) -> True, 1 (norma) -> False
-        df['is_anomaly'] = np.asarray(labels) == -1
+        df['is_anomaly'] = AnomalyDetector.flag_top_fraction(df['anomaly_score'].to_numpy(), contamination)
 
         # Sygnały transakcyjne (strategia konfluencji – oba warunki muszą być spełnione):
         # Kupno: RSI < 32 ORAZ cena poniżej dolnej wstęgi Bollingera

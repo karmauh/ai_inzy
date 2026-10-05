@@ -120,3 +120,10 @@ def test_market_endpoint_invalid_period():
     response = client.get("/api/v1/market/data/AAPL?period=abc")
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("n_runs", [0, 31])
+def test_evaluate_endpoint_validates_n_runs(request_payload, n_runs):
+    response = client.post("/api/v1/evaluation/evaluate", json={"data": request_payload["data"], "n_runs": n_runs})
+
+    assert response.status_code == 422

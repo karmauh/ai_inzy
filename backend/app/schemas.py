@@ -27,6 +27,8 @@ class AssessmentRequest(BaseModel):
 class EvaluateRequest(BaseModel):
     data: DataPoints = Field(min_length=MIN_DATA_POINTS)
     fraction: float = Field(default=0.05, gt=0, le=0.5)
+    # Liczba powtórzeń ewaluacji z różnymi seedami (wynik: średnia ± odchylenie standardowe)
+    n_runs: int = Field(default=10, ge=1, le=30)
     models: List[ModelType] = Field(
         default_factory=lambda: ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'],
         min_length=1,

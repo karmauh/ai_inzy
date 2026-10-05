@@ -40,7 +40,8 @@ export const translations = {
         metricF1: "Balans F1",
         metricPrecision: "Tylko Precyzja",
         metricRecall: "Bezwzględny Recall",
-        csv: "⇩ CSV"
+        csv: "⇩ CSV",
+        runsInfo: "Wyniki to średnia ± odchylenie standardowe z {n} przebiegów z różnie rozmieszczonymi anomaliami."
       },
       insights: {
         title: "Podsumowanie i Rekomendacje Eksperckie",
@@ -174,7 +175,8 @@ export const translations = {
         metricF1: "F1 Balance",
         metricPrecision: "Precision Only",
         metricRecall: "Absolute Recall",
-        csv: "⇩ CSV"
+        csv: "⇩ CSV",
+        runsInfo: "Results are mean ± standard deviation over {n} runs with differently placed anomalies."
       },
       insights: {
         title: "Expert Summary & Recommendations",

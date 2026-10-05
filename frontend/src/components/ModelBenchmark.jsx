@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BarChart, Bar, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, ErrorBar, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { exportCSV } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -7,6 +7,15 @@ const formatPercent = (val) => `${(val * 100).toFixed(1)}%`;
 
 // Precision: teal, Recall: amber, F1: fiolet – każda metryka musi być odróżnialna na wykresie
 const F1_COLOR = '#a78bfa';
+
+// Wartość z odchyleniem standardowym z wielu przebiegów ewaluacji, np. "74.9% ± 6.3%"
+const formatWithStd = (val, std) => (std ? `${formatPercent(val)} ± ${formatPercent(std)}` : formatPercent(val));
+// Macierz pomyłek to średnia na przebieg – liczby niecałkowite z jednym miejscem po przecinku
+const formatCount = (val) => (Number.isInteger(val) ? `${val}` : val.toFixed(1));
+
+const StdLabel = ({ value }) => (
+    value ? <span className="block text-[11px] font-medium text-neutral-500">± {formatPercent(value)}</span> : null
+);
 
 const CustomTooltip = ({ active, payload, label, t }) => {
     if (active && payload && payload.length) {
@@ -24,7 +33,7 @@ const CustomTooltip = ({ active, payload, label, t }) => {
                             <div key={index} className="flex flex-col">
                                 <div className="flex justify-between items-center">
                                     <span style={{ color: entry.color }} className="font-bold tracking-wide">{entry.name}</span>
-                                    <span className="text-white font-black tracking-wider bg-neutral-700 px-2 py-0.5 rounded shadow-inner">{formatPercent(entry.value)}</span>
+                                    <span className="text-white font-black tracking-wider bg-neutral-700 px-2 py-0.5 rounded shadow-inner">{formatWithStd(entry.value, entry.payload?.[`${entry.dataKey}_std`])}</span>
                                 </div>
                                 <span className="text-[10px] text-neutral-400 mt-1 leading-tight">{t(descKey)}</span>
                             </div>
@@ -37,7 +46,7 @@ const CustomTooltip = ({ active, payload, label, t }) => {
     return null;
 };
 
-const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel }) => {
+const ModelBenchmark = ({ evaluationData, nRuns, loading, onRunBenchmark, onSelectModel }) => {
     const { t } = useLanguage();
     const [primaryMetric, setPrimaryMetric] = useState('f1_score');
     const [sortConfig, setSortConfig] = useState({ key: 'f1_score', direction: 'desc' });
@@ -85,6 +94,7 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
         precision: data.metrics?.precision || 0,
         recall: data.metrics?.recall || 0,
         f1_score: data.metrics?.f1_score || 0,
+        std: data.metrics_std || {},
         cm: data.confusion_matrix || {},
         isError: false
     }));
@@ -99,9 +109,9 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
     const handleExportCSV = () => {
         const payload = modelsList.map(m => ({
             [t('benchmark.table.model')]: m.name,
-            [t('benchmark.table.precision')]: formatPercent(m.precision),
-            [t('benchmark.table.recall')]: formatPercent(m.recall),
-            [t('benchmark.table.f1Score')]: formatPercent(m.f1_score),
+            [t('benchmark.table.precision')]: formatWithStd(m.precision, m.std.precision),
+            [t('benchmark.table.recall')]: formatWithStd(m.recall, m.std.recall),
+            [t('benchmark.table.f1Score')]: formatWithStd(m.f1_score, m.std.f1_score),
             [`${t('benchmark.table.tooltipTp')}`]: m.cm.true_positives || 0,
             [`${t('benchmark.table.tooltipFp')}`]: m.cm.false_positives || 0,
             [`${t('benchmark.table.tooltipTn')}`]: m.cm.true_negatives || 0,
@@ -147,6 +157,9 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
         precision: m.precision,
         recall: m.recall,
         f1_score: m.f1_score,
+        precision_std: m.std.precision || 0,
+        recall_std: m.std.recall || 0,
+        f1_score_std: m.std.f1_score || 0,
     }));
 
     const renderInsights = () => {
@@ -199,6 +212,9 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
                     <div>
                         <h2 className="text-2xl font-black text-white">{t('benchmark.header.title')}</h2>
                         <p className="text-sm font-semibold mt-1 text-neutral-400">{t('benchmark.header.subtitle')}</p>
+                        {nRuns > 1 && (
+                            <p className="text-xs mt-1 text-neutral-500">{t('benchmark.header.runsInfo').replace('{n}', nRuns)}</p>
+                        )}
                     </div>
                     <div className="flex flex-col sm:flex-row items-center gap-3">
                         <div className="flex bg-neutral-900 rounded-lg p-1 border border-neutral-700">
@@ -228,9 +244,15 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
                                 <YAxis stroke="#9ca3af" tickFormatter={formatPercent} tickLine={false} axisLine={{ stroke: '#4b5563' }} domain={[0, 1]} />
                                 <Tooltip content={<CustomTooltip t={t} />} cursor={{ fill: '#374151', opacity: 0.2 }} />
                                 <Legend wrapperStyle={{ color: '#9ca3af', paddingTop: '20px' }} iconType="circle" />
-                                <Bar dataKey="precision" name="Precision" fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={30} />
-                                <Bar dataKey="recall" name="Recall" fill="#fbbf24" radius={[6, 6, 0, 0]} barSize={30} />
-                                <Bar dataKey="f1_score" name="F1 Score" fill={F1_COLOR} radius={[6, 6, 0, 0]} barSize={30} />
+                                <Bar dataKey="precision" name="Precision" fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={30}>
+                                    <ErrorBar dataKey="precision_std" stroke="#e5e7eb" strokeWidth={1.5} width={6} />
+                                </Bar>
+                                <Bar dataKey="recall" name="Recall" fill="#fbbf24" radius={[6, 6, 0, 0]} barSize={30}>
+                                    <ErrorBar dataKey="recall_std" stroke="#e5e7eb" strokeWidth={1.5} width={6} />
+                                </Bar>
+                                <Bar dataKey="f1_score" name="F1 Score" fill={F1_COLOR} radius={[6, 6, 0, 0]} barSize={30}>
+                                    <ErrorBar dataKey="f1_score_std" stroke="#e5e7eb" strokeWidth={1.5} width={6} />
+                                </Bar>
                             </BarChart>
                         ) : (
                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
@@ -285,29 +307,29 @@ const ModelBenchmark = ({ evaluationData, loading, onRunBenchmark, onSelectModel
                                                 <span className="text-xs text-neutral-500 font-medium leading-relaxed mt-1.5 max-w-[240px] group-hover:text-neutral-400 transition-colors">{m.meta}</span>
                                             </div>
                                         </td>
-                                        <td className={`py-4 px-5 align-middle font-bold text-[14px] ${primaryMetric === 'precision' ? 'text-primary-400 bg-neutral-700/40' : ''}`}>{formatPercent(m.precision)}</td>
-                                        <td className={`py-4 px-5 align-middle font-bold text-[14px] ${primaryMetric === 'recall' ? 'text-primary-400 bg-neutral-700/40' : ''}`}>{formatPercent(m.recall)}</td>
-                                        <td className={`py-4 px-5 align-middle font-black text-[15px] ${primaryMetric === 'f1_score' ? 'text-primary-400 bg-neutral-700/40' : 'text-neutral-300'}`}>{formatPercent(m.f1_score)}</td>
+                                        <td className={`py-4 px-5 align-middle font-bold text-[14px] ${primaryMetric === 'precision' ? 'text-primary-400 bg-neutral-700/40' : ''}`}>{formatPercent(m.precision)}<StdLabel value={m.std.precision} /></td>
+                                        <td className={`py-4 px-5 align-middle font-bold text-[14px] ${primaryMetric === 'recall' ? 'text-primary-400 bg-neutral-700/40' : ''}`}>{formatPercent(m.recall)}<StdLabel value={m.std.recall} /></td>
+                                        <td className={`py-4 px-5 align-middle font-black text-[15px] ${primaryMetric === 'f1_score' ? 'text-primary-400 bg-neutral-700/40' : 'text-neutral-300'}`}>{formatPercent(m.f1_score)}<StdLabel value={m.std.f1_score} /></td>
                                         <td className="py-4 px-5 align-middle bg-neutral-700/20 border-l border-neutral-700">
                                             <div className="flex justify-center gap-2 text-[12px] font-mono whitespace-nowrap opacity-90">
                                                 <div className="flex flex-col gap-1">
                                                     <div onClick={() => handleSort('tp')} className="bg-emerald-900/50 border border-emerald-600/40 text-emerald-300 px-3 py-1 rounded cursor-pointer hover:bg-emerald-900/70 transition-colors flex justify-between gap-3 items-center min-w-[120px]" title={t('benchmark.table.tooltipTp')}>
                                                         <span>{t('benchmark.table.tp')} <SortIndicator columnKey="tp" /></span>
-                                                        <span className="font-bold text-[14px]">{m.cm.true_positives || 0}</span>
+                                                        <span className="font-bold text-[14px]">{formatCount(m.cm.true_positives || 0)}</span>
                                                     </div>
                                                     <div onClick={() => handleSort('fp')} className="bg-red-900/50 border border-red-600/40 text-red-300 px-3 py-1 rounded cursor-pointer hover:bg-red-900/70 transition-colors flex justify-between gap-3 items-center min-w-[120px]" title={t('benchmark.table.tooltipFp')}>
                                                         <span>{t('benchmark.table.fp')} <SortIndicator columnKey="fp" /></span>
-                                                        <span className="font-bold text-[14px]">{m.cm.false_positives || 0}</span>
+                                                        <span className="font-bold text-[14px]">{formatCount(m.cm.false_positives || 0)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col gap-1">
                                                     <div onClick={() => handleSort('tn')} className="bg-neutral-700/70 border border-neutral-600/50 text-neutral-300 px-3 py-1 rounded cursor-pointer hover:bg-neutral-700/90 transition-colors flex justify-between gap-3 items-center min-w-[120px]" title={t('benchmark.table.tooltipTn')}>
                                                         <span>{t('benchmark.table.tn')} <SortIndicator columnKey="tn" /></span>
-                                                        <span className="font-bold text-[14px]">{m.cm.true_negatives || 0}</span>
+                                                        <span className="font-bold text-[14px]">{formatCount(m.cm.true_negatives || 0)}</span>
                                                     </div>
                                                     <div onClick={() => handleSort('fn')} className="bg-yellow-900/50 border border-yellow-600/40 text-yellow-300 px-3 py-1 rounded cursor-pointer hover:bg-yellow-900/70 transition-colors flex justify-between gap-3 items-center min-w-[120px]" title={t('benchmark.table.tooltipFn')}>
                                                         <span>{t('benchmark.table.fn')} <SortIndicator columnKey="fn" /></span>
-                                                        <span className="font-bold text-[14px]">{m.cm.false_negatives || 0}</span>
+                                                        <span className="font-bold text-[14px]">{formatCount(m.cm.false_negatives || 0)}</span>
                                                     </div>
                                                 </div>
                                             </div>

@@ -24,7 +24,8 @@ class EvaluationService:
         rng = np.random.default_rng(seed)
         std_price = df['close'].std()
 
-        n_anomalies = max(1, int(len(df) * fraction)) if fraction > 0 else 0
+        # Ta sama liczba co punktów oznaczanych przez modele (AnomalyDetector.flag_top_fraction)
+        n_anomalies = min(len(df), max(1, int(np.ceil(len(df) * fraction)))) if fraction > 0 else 0
         anomaly_indices = rng.choice(df.index, size=n_anomalies, replace=False)
 
         df['ground_truth'] = False
@@ -55,44 +56,52 @@ class EvaluationService:
         return df.to_dict(orient='records')
 
     @staticmethod
-    def evaluate_models(data: List[Dict[str, Any]], fraction: float = 0.05, models: Optional[Sequence[str]] = None) -> Dict[str, Any]:
+    def evaluate_models(data: List[Dict[str, Any]], fraction: float = 0.05, models: Optional[Sequence[str]] = None, n_runs: int = 10) -> Dict[str, Any]:
         """
         Ocenia wiele modeli detekcji anomalii na danych z wstrzykniętymi syntetycznymi anomaliami.
-        Parametr contamination modeli odpowiada frakcji wstrzykniętych anomalii.
+        Ewaluacja jest powtarzana n_runs razy (seed 0..n_runs-1 – inne miejsca i typy anomalii),
+        a metryki raportowane są jako średnia i odchylenie standardowe. Wszystkie modele oceniają
+        te same zestawy danych testowych. Parametr contamination modeli odpowiada frakcji anomalii.
         """
         models = list(models) if models else list(SUPPORTED_MODELS)
-        test_data = EvaluationService.inject_synthetic_anomalies(data, fraction=fraction)
-        if not test_data:
+        runs = [EvaluationService.inject_synthetic_anomalies(data, fraction=fraction, seed=seed) for seed in range(n_runs)]
+        if not runs or not runs[0]:
             return {}
-
-        y_true = [bool(row['ground_truth']) for row in test_data]
 
         results = {}
         for model in models:
             try:
-                preds_data = AnomalyDetector.detect_anomalies(test_data, model_type=model, contamination=fraction)
-                y_pred = [res['is_anomaly'] for res in preds_data]
+                metrics_per_run, cm_per_run = [], []
+                for test_data in runs:
+                    y_true = [bool(row['ground_truth']) for row in test_data]
+                    y_pred = [res['is_anomaly'] for res in AnomalyDetector.detect_anomalies(test_data, model_type=model, contamination=fraction)]
 
-                if len(y_pred) != len(y_true):
-                    raise ValueError(f"Prediction length mismatch for model {model}.")
+                    if len(y_pred) != len(y_true):
+                        raise ValueError(f"Prediction length mismatch for model {model}.")
 
-                tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[False, True]).ravel()
+                    metrics_per_run.append([
+                        precision_score(y_true, y_pred, zero_division=0),
+                        recall_score(y_true, y_pred, zero_division=0),
+                        f1_score(y_true, y_pred, zero_division=0),
+                    ])
+                    cm_per_run.append(confusion_matrix(y_true, y_pred, labels=[False, True]).ravel())
+
+                mean, std = np.mean(metrics_per_run, axis=0), np.std(metrics_per_run, axis=0)
+                # Macierz pomyłek: średnia liczba przypadków na jeden przebieg
+                tn, fp, fn, tp = np.mean(cm_per_run, axis=0)
 
                 results[model] = {
-                    "metrics": {
-                        "precision": precision_score(y_true, y_pred, zero_division=0),
-                        "recall": recall_score(y_true, y_pred, zero_division=0),
-                        "f1_score": f1_score(y_true, y_pred, zero_division=0)
-                    },
+                    "metrics": {"precision": float(mean[0]), "recall": float(mean[1]), "f1_score": float(mean[2])},
+                    "metrics_std": {"precision": float(std[0]), "recall": float(std[1]), "f1_score": float(std[2])},
                     "confusion_matrix": {
-                        "true_negatives": int(tn),
-                        "false_positives": int(fp),
-                        "false_negatives": int(fn),
-                        "true_positives": int(tp)
+                        "true_negatives": round(float(tn), 1),
+                        "false_positives": round(float(fp), 1),
+                        "false_negatives": round(float(fn), 1),
+                        "true_positives": round(float(tp), 1)
                     },
                     "summary": {
-                        "total_anomalies_detect": int(fp + tp),
-                        "total_ground_truth": int(fn + tp)
+                        "total_anomalies_detect": round(float(fp + tp), 1),
+                        "total_ground_truth": round(float(fn + tp), 1)
                     }
                 }
             except Exception as e:
@@ -103,7 +112,8 @@ class EvaluationService:
         return {
             "evaluation": results,
             "metadata": {
-                "total_records": len(y_true),
-                "injected_fraction": fraction
+                "total_records": len(runs[0]),
+                "injected_fraction": fraction,
+                "n_runs": n_runs
             }
         }

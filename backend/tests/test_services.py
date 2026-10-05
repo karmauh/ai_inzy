@@ -1,3 +1,4 @@
+import numpy as np
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
@@ -34,7 +35,7 @@ def test_injection_is_reproducible_and_recomputes_indicators(market_data):
 
     injected = [i for i, r in enumerate(first) if r['ground_truth']]
     assert injected == [i for i, r in enumerate(second) if r['ground_truth']]
-    assert len(injected) == int(len(market_data) * 0.05)
+    assert len(injected) == int(np.ceil(len(market_data) * 0.05))
 
     # Wskaźniki muszą zostać przeliczone po modyfikacji ceny
     changed = [i for i in injected if first[i]['close'] != market_data[i]['close']]
@@ -51,12 +52,25 @@ def test_evaluate_models_uses_fraction_as_contamination(market_data):
     assert mock_detect.call_args.kwargs['contamination'] == 0.1
 
 
-def test_evaluate_models_returns_metrics(market_data):
-    result = EvaluationService.evaluate_models(market_data, fraction=0.05, models=['isolation_forest'])
+def test_evaluate_models_returns_mean_and_std_over_runs(market_data):
+    result = EvaluationService.evaluate_models(market_data, fraction=0.05, models=['isolation_forest'], n_runs=4)
     model_result = result['evaluation']['isolation_forest']
 
+    assert result['metadata']['n_runs'] == 4
     assert set(model_result['metrics']) == {'precision', 'recall', 'f1_score'}
-    assert model_result['summary']['total_ground_truth'] == int(len(market_data) * 0.05)
+    assert set(model_result['metrics_std']) == {'precision', 'recall', 'f1_score'}
+    assert all(0 <= v <= 1 for v in model_result['metrics_std'].values())
+    assert model_result['summary']['total_ground_truth'] == int(np.ceil(len(market_data) * 0.05))
+    # Tyle samo anomalii wstrzykniętych co oznaczonych – precision i recall są sobie równe
+    assert model_result['summary']['total_anomalies_detect'] == model_result['summary']['total_ground_truth']
+
+
+def test_evaluate_models_runs_each_seed_once_per_model(market_data):
+    with patch('app.services.evaluation_service.AnomalyDetector.detect_anomalies',
+               side_effect=lambda data, model_type, contamination: [{'is_anomaly': False} for _ in data]) as mock_detect:
+        EvaluationService.evaluate_models(market_data, fraction=0.05, models=['lof', 'ocsvm'], n_runs=3)
+
+    assert mock_detect.call_count == 6
 
 
 # --- ExportService ---

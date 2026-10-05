@@ -99,3 +99,20 @@ def test_signals_require_both_conditions_and_recent_dates(sample_data):
     assert results[-2]['signal'] == 'Hold'
     assert results[0]['signal'] == 'Hold'
     assert results[0]['date'] == '2025-01-01'
+
+
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder"])
+@pytest.mark.parametrize("contamination", [0.01, 0.05, 0.2])
+def test_all_models_flag_the_same_fraction(market_data, model_type, contamination):
+    # Wspólny próg – porównanie precision/recall między modelami jest uczciwe
+    results = AnomalyDetector.detect_anomalies(market_data, model_type=model_type, contamination=contamination)
+
+    assert sum(r['is_anomaly'] for r in results) == int(np.ceil(contamination * len(market_data)))
+
+
+def test_flagged_points_have_highest_scores(market_data):
+    results = AnomalyDetector.detect_anomalies(market_data, model_type="ocsvm", contamination=0.05)
+    flagged = [r['anomaly_score'] for r in results if r['is_anomaly']]
+    normal = [r['anomaly_score'] for r in results if not r['is_anomaly']]
+
+    assert min(flagged) >= max(normal)

@@ -315,6 +315,7 @@ const Dashboard = () => {
             {activeTab === 'benchmark' && (
                 <ModelBenchmark
                     evaluationData={benchmarkData?.evaluation}
+                    nRuns={benchmarkData?.metadata?.n_runs}
                     loading={loadingBenchmark}
                     onRunBenchmark={handleRunBenchmark}
                     onSelectModel={(modelKey) => {
