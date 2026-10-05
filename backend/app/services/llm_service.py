@@ -3,7 +3,6 @@ import os
 import json
 import logging
 import re
-import time
 import requests
 from dotenv import load_dotenv
 
@@ -11,11 +10,18 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+GEMINI_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+# Modele próbowane po kolei – kolejny jest używany, gdy poprzedni jest przeciążony lub niedostępny.
+# Domyślnie lekkie modele "flash-lite", które są znacznie mniej oblegane niż "flash".
+DEFAULT_GEMINI_MODELS = "gemini-3.5-flash-lite,gemini-3.1-flash-lite"
 GEMINI_TIMEOUT_SECONDS = 30
-GEMINI_MAX_ATTEMPTS = 2
-GEMINI_RETRY_DELAY_SECONDS = 1.5
-_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+# Przeciążenie, limit zapytań, błąd serwera lub wycofany model – warto spróbować następnego modelu
+_FALLBACK_STATUS = {404, 429, 500, 502, 503, 504}
+
+
+def _gemini_models() -> List[str]:
+    models = os.getenv("GEMINI_MODELS", DEFAULT_GEMINI_MODELS)
+    return [m.strip() for m in models.split(",") if m.strip()]
 
 # Kanoniczne wartości zwracane przez API (tłumaczone po stronie frontendu i raportu PDF).
 # Klucze słowników to warianty, które może zwrócić model (małe litery).
@@ -163,23 +169,30 @@ Czy wykryto anomalię statystyczną na ostatniej sesji?: {'Tak' if is_anomaly el
 
         prompt = LLMService.build_prompt(results[-1], ticker_info, language)
 
-        try:
-            for attempt in range(GEMINI_MAX_ATTEMPTS):
+        for model in _gemini_models():
+            try:
                 response = requests.post(
-                    GEMINI_URL,
+                    GEMINI_URL_TEMPLATE.format(model=model),
                     headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
                     json={"contents": [{"parts": [{"text": prompt}]}]},
                     timeout=GEMINI_TIMEOUT_SECONDS,
                 )
-                # Chwilowe przeciążenie / limit zapytań – jedna ponowna próba po krótkiej przerwie
-                if response.status_code in _RETRYABLE_STATUS and attempt < GEMINI_MAX_ATTEMPTS - 1:
-                    logger.warning("Gemini API zwróciło %s, ponawiam próbę", response.status_code)
-                    time.sleep(GEMINI_RETRY_DELAY_SECONDS)
-                    continue
+            except requests.RequestException:
+                logger.warning("Brak odpowiedzi od modelu %s, próbuję kolejnego", model, exc_info=True)
+                continue
+
+            if response.status_code in _FALLBACK_STATUS:
+                logger.warning("Model %s zwrócił %s, próbuję kolejnego", model, response.status_code)
+                continue
+
+            try:
+                response.raise_for_status()
+                text_output = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                return LLMService.parse_response(text_output)
+            except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
+                # Błąd nieprzejściowy (np. zły klucz API, zablokowana odpowiedź) – kolejny model nie pomoże
+                logger.exception("Błąd odpowiedzi modelu %s", model)
                 break
-            response.raise_for_status()
-            text_output = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-            return LLMService.parse_response(text_output)
-        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
-            logger.exception("Błąd komunikacji z Gemini API")
-            return _fallback("unavailable", language)
+
+        logger.error("Żaden model Gemini nie zwrócił poprawnej odpowiedzi")
+        return _fallback("unavailable", language)

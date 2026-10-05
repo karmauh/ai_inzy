@@ -138,16 +138,50 @@ def test_generate_assessment_success(monkeypatch, market_data):
     assert result == {"sentiment": "Bearish", "recommendation": "Sell", "summary": "Opis", "confidence": "Low"}
 
 
-def test_generate_assessment_retries_once_on_overload(monkeypatch, market_data):
-    monkeypatch.setenv("GEMINI_API_KEY", "k")
-    monkeypatch.setattr('app.services.llm_service.time.sleep', lambda _s: None)
-    overloaded = MagicMock(status_code=503)
-    overloaded.raise_for_status.side_effect = requests.HTTPError("503")
+def _ok_response(text='Opis\n```json\n{"recommendation": "Buy"}\n```'):
     ok = MagicMock(status_code=200)
-    ok.json.return_value = {"candidates": [{"content": {"parts": [{"text": 'Opis\n```json\n{"recommendation": "Buy"}\n```'}]}}]}
+    ok.json.return_value = {"candidates": [{"content": {"parts": [{"text": text}]}}]}
+    return ok
 
-    with patch('app.services.llm_service.requests.post', side_effect=[overloaded, ok]) as mock_post:
+
+def test_generate_assessment_falls_back_to_next_model_on_overload(monkeypatch, market_data):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_MODELS", "primary-model, backup-model")
+
+    with patch('app.services.llm_service.requests.post',
+               side_effect=[MagicMock(status_code=503), _ok_response()]) as mock_post:
         result = LLMService.generate_assessment(market_data, None, 'pl')
 
-    assert mock_post.call_count == 2
+    urls = [c.args[0] for c in mock_post.call_args_list]
+    assert "primary-model" in urls[0] and "backup-model" in urls[1]
     assert result["recommendation"] == "Buy"
+
+
+def test_generate_assessment_falls_back_on_timeout(monkeypatch, market_data):
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_MODELS", "a,b")
+
+    with patch('app.services.llm_service.requests.post', side_effect=[requests.Timeout(), _ok_response()]):
+        result = LLMService.generate_assessment(market_data, None, 'en')
+
+    assert result["recommendation"] == "Buy"
+
+
+def test_generate_assessment_stops_on_non_transient_error(monkeypatch, market_data):
+    monkeypatch.setenv("GEMINI_API_KEY", "bad-key")
+    monkeypatch.setenv("GEMINI_MODELS", "a,b")
+    unauthorized = MagicMock(status_code=403)
+    unauthorized.raise_for_status.side_effect = requests.HTTPError("403")
+
+    with patch('app.services.llm_service.requests.post', return_value=unauthorized) as mock_post:
+        result = LLMService.generate_assessment(market_data, None, 'en')
+
+    assert mock_post.call_count == 1
+    assert result["confidence"] == "Low"
+
+
+def test_default_models_are_used_without_env(monkeypatch):
+    from app.services.llm_service import _gemini_models
+    monkeypatch.delenv("GEMINI_MODELS", raising=False)
+
+    assert _gemini_models()[0] == "gemini-3.5-flash-lite"
