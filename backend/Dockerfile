@@ -1,11 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu fonts-dejavu-extra && rm -rf /var/lib/apt/lists/*
 
 # Torch w wariancie CPU (bez CUDA) – znacznie mniejszy obraz
-RUN pip install --no-cache-dir torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
 
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
