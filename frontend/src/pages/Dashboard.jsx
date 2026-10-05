@@ -9,6 +9,9 @@ import ResultsTable from '../components/ResultsTable';
 import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI, generateAssessment } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
+const DEFAULT_SETTINGS = { model: 'isolation_forest', period: '1y', contamination: 0.05, mode: 'batch' };
+const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS);
+
 const Dashboard = () => {
     const { t, language } = useLanguage();
     // Stan wyszukiwania tickera
@@ -29,14 +32,15 @@ const Dashboard = () => {
     // Scenariusz benchmarku: 'basic' (duże, pojedyncze anomalie) lub 'extended' (realistyczne, także wielosesyjne)
     const [benchmarkScenario, setBenchmarkScenario] = useState('basic');
     
-    // Ustawienia analizy (panel "Ustawienia analizy"); zachowywane między wyszukiwaniami
+    // Ustawienia analizy: 'settings' to ustawienia, na których powstały widoczne wyniki,
+    // 'draft' to wartości w panelu – stosowane dopiero przyciskiem "Zastosuj" lub przy wyszukiwaniu.
+    // contamination = czułość (odsetek sesji oznaczanych jako anomalie), używana też jako frakcja anomalii w benchmarku;
+    // mode: 'batch' (analiza historyczna) lub 'walk_forward' (bez wglądu w przyszłość)
+    const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+    const [draft, setDraft] = useState(DEFAULT_SETTINGS);
+    const [showSettings, setShowSettings] = useState(false);
     const [symbol, setSymbol] = useState(null);
-    const [period, setPeriod] = useState('1y');
-    const [currentModel, setCurrentModel] = useState('isolation_forest');
-    // Czułość = odsetek sesji oznaczanych jako anomalie (contamination); używana też jako frakcja anomalii w benchmarku
-    const [contamination, setContamination] = useState(0.05);
-    // Tryb detekcji: 'batch' (analiza historyczna) lub 'walk_forward' (bez wglądu w przyszłość)
-    const [detectionMode, setDetectionMode] = useState('batch');
+    const settingsDirty = SETTINGS_KEYS.some((key) => draft[key] !== settings[key]);
 
     // Po zmianie języka generujemy tylko brakującą ocenę AI (bez ponownego uruchamiania modelu ML)
     useEffect(() => {
@@ -81,7 +85,10 @@ const Dashboard = () => {
         }
     };
 
-    const handleSearch = async (newSymbol, periodToUse = period) => {
+    // Wyszukiwanie zawsze używa ustawień widocznych w panelu (szkicu) – stają się one ustawieniami zastosowanymi
+    const handleSearch = async (newSymbol) => {
+        const applied = draft;
+        setSettings(applied);
         setSearchLoading(true);
         setAnalysisResults(null);
         setAssessments({});
@@ -91,12 +98,12 @@ const Dashboard = () => {
         setError(null);
         
         try {
-            const data = await fetchMarketData(newSymbol, periodToUse);
+            const data = await fetchMarketData(newSymbol, applied.period);
             setSymbol(newSymbol);
             setTickerInfo(data.info);
             
             // Automatyczne wyzwolenie analizy po pobraniu danych rynkowych
-            await runAnalysis({ points: data.data, info: data.info });
+            await runAnalysis({ points: data.data, info: data.info, analysisSettings: applied });
             
         } catch (err) {
             console.error(err);
@@ -112,21 +119,16 @@ const Dashboard = () => {
         }
     };
 
-    // Nadpisania pozwalają użyć nowej wartości ustawienia, zanim stan Reacta zostanie zaktualizowany
-    const runAnalysis = async ({
-        points = analysisResults,
-        info = tickerInfo,
-        model = currentModel,
-        mode = detectionMode,
-        sensitivity = contamination,
-    } = {}) => {
+    // Nadpisania pozwalają użyć nowych wartości, zanim stan Reacta zostanie zaktualizowany
+    const runAnalysis = async ({ points = analysisResults, info = tickerInfo, analysisSettings = settings } = {}) => {
         if (!points) return;
         
         setLoadingAnalysis(true);
         setError(null);
         try {
             // Wywołanie API analizy anomalii i interpretacji AI
-            const results = await analyzeData(points, model, sensitivity, info, language, mode);
+            const { model, contamination, mode } = analysisSettings;
+            const results = await analyzeData(points, model, contamination, info, language, mode);
             
             // Aktualizacja stanu wynikami z backendu
             setAnalysisResults(results.results);
@@ -150,33 +152,29 @@ const Dashboard = () => {
         }
     };
 
-    const handleModeChange = (mode) => {
-        if (mode === detectionMode || loadingAnalysis) return;
-        setDetectionMode(mode);
-        // Benchmark dotyczył poprzedniego trybu – zostanie policzony ponownie na żądanie
-        setBenchmarkData(null);
-        runAnalysis({ mode });
+    // "Zastosuj ustawienia": jedna analiza ze wszystkimi zmianami naraz; nowy okres wymaga ponownego pobrania danych
+    const handleApplySettings = () => {
+        if (!settingsDirty || !symbol || loadingAnalysis || searchLoading) return;
+        if (draft.period !== settings.period) {
+            handleSearch(symbol);
+            return;
+        }
+        // Benchmark obejmuje wszystkie modele, ale zależy od trybu i czułości
+        if (draft.mode !== settings.mode || draft.contamination !== settings.contamination) setBenchmarkData(null);
+        setSettings(draft);
+        runAnalysis({ analysisSettings: draft });
     };
 
-    const handleModelChange = (model) => {
-        if (model === currentModel || loadingAnalysis) return;
-        setCurrentModel(model);
-        runAnalysis({ model });
-    };
+    const handleResetSettings = () => setDraft(settings);
 
-    const handleContaminationChange = (sensitivity) => {
-        if (sensitivity === contamination || loadingAnalysis) return;
-        setContamination(sensitivity);
-        // Benchmark wstrzykuje tyle anomalii, ile wynosi czułość – wyniki dla starej wartości są nieaktualne
-        setBenchmarkData(null);
-        runAnalysis({ sensitivity });
-    };
-
-    const handlePeriodChange = (newPeriod) => {
-        if (newPeriod === period || loadingAnalysis || searchLoading) return;
-        setPeriod(newPeriod);
-        // Inny okres to inne dane – pobieramy je ponownie (przed pierwszym wyszukiwaniem tylko zapamiętujemy wybór)
-        if (symbol) handleSearch(symbol, newPeriod);
+    // "Analizuj tym modelem" w benchmarku działa od razu (świadoma, pojedyncza decyzja) i aktualizuje panel
+    const handleSelectModelFromBenchmark = (model) => {
+        setActiveTab('analysis');
+        if (model === settings.model || loadingAnalysis) return;
+        const applied = { ...settings, model };
+        setSettings(applied);
+        setDraft((prev) => ({ ...prev, model }));
+        runAnalysis({ analysisSettings: applied });
     };
 
     const handleRunBenchmark = async (scenario = benchmarkScenario) => {
@@ -185,7 +183,7 @@ const Dashboard = () => {
         
         setLoadingBenchmark(true);
         try {
-            const results = await evaluateModelsAPI(analysisResults, contamination, undefined, detectionMode, scenario);
+            const results = await evaluateModelsAPI(analysisResults, settings.contamination, undefined, settings.mode, scenario);
             setBenchmarkData(results);
         } catch (err) {
             console.error("Benchmark failed:", err);
@@ -210,7 +208,14 @@ const Dashboard = () => {
                         </div>
 
                         <div className="flex-1">
-                            <TickerSearch onSearch={handleSearch} loading={searchLoading} />
+                            <TickerSearch
+                                onSearch={handleSearch}
+                                loading={searchLoading}
+                                settings={draft}
+                                settingsOpen={showSettings}
+                                settingsPending={settingsDirty && Boolean(symbol)}
+                                onToggleSettings={() => setShowSettings((open) => !open)}
+                            />
                             {error && (
                                 <div className="mt-4 p-4 bg-red-900/50 border border-red-500/50 rounded-xl text-red-200 text-sm animate-fade-in-up">
                                     <div className="flex gap-3 items-center">
@@ -289,17 +294,18 @@ const Dashboard = () => {
                  </div>
             </div>
 
-            <AnalysisSettings
-                model={currentModel}
-                period={period}
-                contamination={contamination}
-                mode={detectionMode}
-                disabled={loadingAnalysis || searchLoading}
-                onModelChange={handleModelChange}
-                onPeriodChange={handlePeriodChange}
-                onContaminationChange={handleContaminationChange}
-                onModeChange={handleModeChange}
-            />
+            {showSettings && (
+                <AnalysisSettings
+                    value={draft}
+                    onChange={(changes) => setDraft((prev) => ({ ...prev, ...changes }))}
+                    dirty={settingsDirty}
+                    hasResults={Boolean(symbol)}
+                    disabled={loadingAnalysis || searchLoading}
+                    onApply={handleApplySettings}
+                    onReset={handleResetSettings}
+                    onClose={() => setShowSettings(false)}
+                />
+            )}
 
             {/* Widoki zakładek */}
             {analysisResults && (
@@ -345,16 +351,13 @@ const Dashboard = () => {
             {activeTab === 'benchmark' && (
                 <ModelBenchmark
                     evaluationData={benchmarkData?.evaluation}
-                    detectionMode={detectionMode}
+                    detectionMode={settings.mode}
                     scenario={benchmarkScenario}
                     onScenarioChange={handleScenarioChange}
                     nRuns={benchmarkData?.metadata?.n_runs}
                     loading={loadingBenchmark}
                     onRunBenchmark={() => handleRunBenchmark()}
-                    onSelectModel={(modelKey) => {
-                        setActiveTab('analysis');
-                        handleModelChange(modelKey);
-                    }}
+                    onSelectModel={handleSelectModelFromBenchmark}
                 />
             )}
         </div>

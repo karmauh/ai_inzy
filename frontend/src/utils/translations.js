@@ -132,7 +132,14 @@ export const translations = {
         "5y": "5 lat"
       },
       sensitivity: "Czułość",
-      sensitivityHint: "Odsetek sesji oznaczanych jako anomalie. Wyższa czułość = więcej alarmów, ale też więcej fałszywych. Benchmark wstrzykuje tyle samo anomalii."
+      sensitivityHint: "Odsetek sesji oznaczanych jako anomalie. Wyższa czułość = więcej alarmów, ale też więcej fałszywych. Benchmark wstrzykuje tyle samo anomalii.",
+      apply: "Zastosuj ustawienia",
+      reset: "Przywróć",
+      close: "Zwiń ustawienia",
+      pending: "Masz niezastosowane zmiany",
+      pendingShort: "niezastosowane zmiany",
+      searchHint: "Ustawienia zostaną użyte przy wyszukiwaniu spółki.",
+      applyHint: "Zmień ustawienia i kliknij „Zastosuj ustawienia” – analiza zostanie wykonana raz, ze wszystkimi zmianami."
     },
     mode: {
       title: "Tryb detekcji",
@@ -341,7 +348,14 @@ export const translations = {
         "5y": "5 years"
       },
       sensitivity: "Sensitivity",
-      sensitivityHint: "Share of sessions flagged as anomalies. Higher sensitivity = more alerts, but also more false ones. The benchmark injects the same share of anomalies."
+      sensitivityHint: "Share of sessions flagged as anomalies. Higher sensitivity = more alerts, but also more false ones. The benchmark injects the same share of anomalies.",
+      apply: "Apply settings",
+      reset: "Revert",
+      close: "Collapse settings",
+      pending: "You have unapplied changes",
+      pendingShort: "unapplied changes",
+      searchHint: "These settings will be used when you search for a stock.",
+      applyHint: "Change the settings and click “Apply settings” – the analysis runs once, with all changes."
     },
     mode: {
       title: "Detection mode",
