@@ -1,10 +1,14 @@
 venv/
 node_modules/
 frontend/node_modules/
+frontend/dist/
 .git/
 .idea/
+.vscode/
 __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
-postgres_data/
+# Sekrety przekazywane w runtime przez env_file – nie mogą trafić do obrazu
+.env
+backend/.env
