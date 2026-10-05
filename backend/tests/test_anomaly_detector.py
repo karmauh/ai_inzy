@@ -154,3 +154,21 @@ def test_batch_mode_is_default_and_unchanged(market_data):
     batch = AnomalyDetector.detect_anomalies(market_data, model_type="isolation_forest", mode="batch")
 
     assert default == batch
+
+
+@pytest.mark.parametrize("mode", ["batch", "walk_forward"])
+def test_autoencoder_flags_obvious_spike(mode):
+    # Autoenkoder uczony bez przycięcia wartości skrajnych "uczył się" je odtwarzać i przeoczał wyraźne anomalie
+    from tests.conftest import make_market_data
+    from app.services.data_processor import DataProcessor
+    data = make_market_data(seed=3)
+    spike = 200
+    df = pd.DataFrame(data)
+    df.loc[spike, ['close', 'high']] = df.loc[spike, 'close'] * 1.3
+    df.loc[spike, 'volume'] = df.loc[spike, 'volume'] * 8
+    df = DataProcessor.add_technical_indicators(df[['date', 'open', 'high', 'low', 'close', 'volume']].astype({'close': float, 'high': float, 'volume': float}))
+    data = df.astype(object).where(pd.notnull(df), None).to_dict(orient='records')
+
+    results = AnomalyDetector.detect_anomalies(data, model_type="autoencoder", contamination=0.05, mode=mode)
+
+    assert results[spike]['is_anomaly']
