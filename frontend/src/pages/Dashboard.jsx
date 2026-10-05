@@ -4,6 +4,7 @@ import TechnicalCharts from '../components/TechnicalCharts';
 import TickerSearch from '../components/TickerSearch';
 import AssessmentPanel from '../components/AssessmentPanel';
 import ModelBenchmark from '../components/ModelBenchmark';
+import AnalysisSettings from '../components/AnalysisSettings';
 import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI, generateAssessment } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -27,9 +28,12 @@ const Dashboard = () => {
     // Scenariusz benchmarku: 'basic' (duże, pojedyncze anomalie) lub 'extended' (realistyczne, także wielosesyjne)
     const [benchmarkScenario, setBenchmarkScenario] = useState('basic');
     
-    // Stan wyboru aktualnego modelu (powiązanie z Benchmarkiem)
+    // Ustawienia analizy (panel "Ustawienia analizy"); zachowywane między wyszukiwaniami
+    const [symbol, setSymbol] = useState(null);
+    const [period, setPeriod] = useState('1y');
     const [currentModel, setCurrentModel] = useState('isolation_forest');
-
+    // Czułość = odsetek sesji oznaczanych jako anomalie (contamination); używana też jako frakcja anomalii w benchmarku
+    const [contamination, setContamination] = useState(0.05);
     // Tryb detekcji: 'batch' (analiza historyczna) lub 'walk_forward' (bez wglądu w przyszłość)
     const [detectionMode, setDetectionMode] = useState('batch');
 
@@ -76,27 +80,27 @@ const Dashboard = () => {
         }
     };
 
-    const handleSearch = async (symbol) => {
+    const handleSearch = async (newSymbol, periodToUse = period) => {
         setSearchLoading(true);
         setAnalysisResults(null);
         setAssessments({});
         setBenchmarkData(null);
         setActiveTab('analysis');
-        setCurrentModel('isolation_forest');
         setTickerInfo(null);
         setError(null);
         
         try {
-            const data = await fetchMarketData(symbol);
+            const data = await fetchMarketData(newSymbol, periodToUse);
+            setSymbol(newSymbol);
             setTickerInfo(data.info);
             
             // Automatyczne wyzwolenie analizy po pobraniu danych rynkowych
-            await runAnalysis(data.data, data.info);
+            await runAnalysis({ points: data.data, info: data.info });
             
         } catch (err) {
             console.error(err);
             if (err.response?.status === 404) {
-                setError(`${t('dashboard.notFound')} ${symbol.toUpperCase()}`);
+                setError(`${t('dashboard.notFound')} ${newSymbol.toUpperCase()}`);
             } else if (err.response?.status === 502) {
                 setError(t('dashboard.providerError'));
             } else {
@@ -107,25 +111,25 @@ const Dashboard = () => {
         }
     };
 
-    const runAnalysis = async (dataPoints = null, tickerInfoOverride = null, modelOverride = null, modeOverride = null) => {
-        // Określenie źródła danych: przekazany argument lub aktualne wyniki analizy
-        const points = dataPoints || analysisResults;
-        const info = tickerInfoOverride || tickerInfo;
-        const modelToUse = modelOverride || currentModel;
-        const modeToUse = modeOverride || detectionMode;
-
+    // Nadpisania pozwalają użyć nowej wartości ustawienia, zanim stan Reacta zostanie zaktualizowany
+    const runAnalysis = async ({
+        points = analysisResults,
+        info = tickerInfo,
+        model = currentModel,
+        mode = detectionMode,
+        sensitivity = contamination,
+    } = {}) => {
         if (!points) return;
         
         setLoadingAnalysis(true);
         setError(null);
         try {
             // Wywołanie API analizy anomalii i interpretacji AI
-            const results = await analyzeData(points, modelToUse, 0.05, info, language, modeToUse);
+            const results = await analyzeData(points, model, sensitivity, info, language, mode);
             
             // Aktualizacja stanu wynikami z backendu
             setAnalysisResults(results.results);
             setAssessments({ [language]: results.assessment });
-            if (modelOverride) setCurrentModel(modelOverride);
             
         } catch (err) {
             console.error("Analysis failed:", err);
@@ -150,7 +154,28 @@ const Dashboard = () => {
         setDetectionMode(mode);
         // Benchmark dotyczył poprzedniego trybu – zostanie policzony ponownie na żądanie
         setBenchmarkData(null);
-        runAnalysis(null, null, null, mode);
+        runAnalysis({ mode });
+    };
+
+    const handleModelChange = (model) => {
+        if (model === currentModel || loadingAnalysis) return;
+        setCurrentModel(model);
+        runAnalysis({ model });
+    };
+
+    const handleContaminationChange = (sensitivity) => {
+        if (sensitivity === contamination || loadingAnalysis) return;
+        setContamination(sensitivity);
+        // Benchmark wstrzykuje tyle anomalii, ile wynosi czułość – wyniki dla starej wartości są nieaktualne
+        setBenchmarkData(null);
+        runAnalysis({ sensitivity });
+    };
+
+    const handlePeriodChange = (newPeriod) => {
+        if (newPeriod === period || loadingAnalysis || searchLoading) return;
+        setPeriod(newPeriod);
+        // Inny okres to inne dane – pobieramy je ponownie (przed pierwszym wyszukiwaniem tylko zapamiętujemy wybór)
+        if (symbol) handleSearch(symbol, newPeriod);
     };
 
     const handleRunBenchmark = async (scenario = benchmarkScenario) => {
@@ -159,7 +184,7 @@ const Dashboard = () => {
         
         setLoadingBenchmark(true);
         try {
-            const results = await evaluateModelsAPI(analysisResults, 0.05, undefined, detectionMode, scenario);
+            const results = await evaluateModelsAPI(analysisResults, contamination, undefined, detectionMode, scenario);
             setBenchmarkData(results);
         } catch (err) {
             console.error("Benchmark failed:", err);
@@ -263,27 +288,17 @@ const Dashboard = () => {
                  </div>
             </div>
 
-            {/* Wybór trybu detekcji */}
-            {analysisResults && (
-                <div className="mb-6 mx-auto max-w-3xl bg-neutral-800 p-4 rounded-xl border border-neutral-700 shadow-lg animate-fade-in-up">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider shrink-0">{t('mode.title')}</span>
-                        <div className="flex bg-neutral-900 rounded-lg p-1 border border-neutral-700">
-                            {['batch', 'walk_forward'].map((mode) => (
-                                <button
-                                    key={mode}
-                                    onClick={() => handleModeChange(mode)}
-                                    disabled={loadingAnalysis}
-                                    className={`px-4 py-1.5 text-xs font-bold rounded transition-all disabled:cursor-wait ${detectionMode === mode ? 'bg-primary-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
-                                >
-                                    {t(`mode.${mode}`)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <p className="text-xs text-neutral-400 mt-3 leading-relaxed">{t(`mode.${detectionMode}Desc`)}</p>
-                </div>
-            )}
+            <AnalysisSettings
+                model={currentModel}
+                period={period}
+                contamination={contamination}
+                mode={detectionMode}
+                disabled={loadingAnalysis || searchLoading}
+                onModelChange={handleModelChange}
+                onPeriodChange={handlePeriodChange}
+                onContaminationChange={handleContaminationChange}
+                onModeChange={handleModeChange}
+            />
 
             {/* Widoki zakładek */}
             {analysisResults && (
@@ -369,7 +384,7 @@ const Dashboard = () => {
                     onRunBenchmark={() => handleRunBenchmark()}
                     onSelectModel={(modelKey) => {
                         setActiveTab('analysis');
-                        runAnalysis(null, null, modelKey);
+                        handleModelChange(modelKey);
                     }}
                 />
             )}

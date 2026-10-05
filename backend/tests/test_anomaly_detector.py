@@ -190,3 +190,12 @@ def test_robust_z_puts_models_on_common_scale():
     # Skala i przesunięcie wyników modelu nie mają znaczenia po normalizacji
     assert np.allclose(AnomalyDetector._robust_z(reference, reference),
                        AnomalyDetector._robust_z(reference * 100 + 7, reference * 100 + 7))
+
+
+def test_walk_forward_refit_interval_is_capped_for_long_histories():
+    from app.services.anomaly_detector import WALK_FORWARD_MAX_REFITS, WALK_FORWARD_MIN_TRAIN, WALK_FORWARD_REFIT_EVERY
+    interval = AnomalyDetector.walk_forward_refit_interval
+
+    assert interval(251) == WALK_FORWARD_REFIT_EVERY
+    for n in (500, 1255, 2500):
+        assert np.ceil((n - WALK_FORWARD_MIN_TRAIN) / interval(n)) <= WALK_FORWARD_MAX_REFITS

@@ -26,7 +26,7 @@ export const translations = {
       loading: {
         title: "Inicjalizacja i weryfikacja algorytmów...",
         subtitle: "Wstrzykiwanie syntetycznych usterek. Modele głębokiego uczenia trenują struktury w locie!",
-        walkForward: "Tryb bez wglądu w przyszłość doucza modele kilkadziesiąt razy na przebieg – może to potrwać do ok. 20 sekund."
+        walkForward: "Tryb bez wglądu w przyszłość doucza modele kilkadziesiąt razy na przebieg – może to potrwać do ok. 20 sekund (przy 2–5 latach danych do ok. 30 sekund)."
       },
       empty: {
         title: "Panel Ewaluacji Rozszerzonej Zablokowany",
@@ -120,12 +120,26 @@ export const translations = {
         defaultDesc: "Wartość metryki porównawczej modeli."
       }
     },
+    settings: {
+      title: "Ustawienia analizy",
+      model: "Model",
+      period: "Okres danych",
+      periodHint: "Dłuższy okres daje modelom więcej historii do nauki, ale analiza i benchmark trwają dłużej.",
+      periods: {
+        "6mo": "6 mies.",
+        "1y": "1 rok",
+        "2y": "2 lata",
+        "5y": "5 lat"
+      },
+      sensitivity: "Czułość",
+      sensitivityHint: "Odsetek sesji oznaczanych jako anomalie. Wyższa czułość = więcej alarmów, ale też więcej fałszywych. Benchmark wstrzykuje tyle samo anomalii."
+    },
     mode: {
       title: "Tryb detekcji",
       batch: "Analiza historyczna",
       walk_forward: "Bez wglądu w przyszłość",
       batchDesc: "Model uczy się na całym okresie naraz i ocenia każdą sesję z wiedzą o całej historii – także o sesjach późniejszych. Dobre do przeglądu historii, ale zawyża skuteczność względem pracy na bieżąco.",
-      walk_forwardDesc: "Każda sesja oceniana jest modelem uczonym wyłącznie na wcześniejszych sesjach (douczanie co 10 sesji), tak jak przy monitorowaniu rynku na bieżąco. Pierwsze 60 sesji służy tylko do nauki modelu i nie jest oceniane."
+      walk_forwardDesc: "Każda sesja oceniana jest modelem uczonym wyłącznie na wcześniejszych sesjach (douczanie co 10 sesji, przy długich okresach rzadziej), tak jak przy monitorowaniu rynku na bieżąco. Pierwsze 60 sesji służy tylko do nauki modelu i nie jest oceniane."
     },
     charts: {
       priceTitle: "Historia Cen i Sygnały AI",
@@ -197,7 +211,7 @@ export const translations = {
       loading: {
         title: "Initializing and verifying algorithms...",
         subtitle: "Injecting synthetic anomalies. Deep learning models train structures on the fly!",
-        walkForward: "No look-ahead mode retrains models dozens of times per run – this may take up to ~20 seconds."
+        walkForward: "No look-ahead mode retrains models dozens of times per run – this may take up to ~20 seconds (up to ~30 seconds for 2–5 years of data)."
       },
       empty: {
         title: "Extended Evaluation Panel Locked",
@@ -291,12 +305,26 @@ export const translations = {
         defaultDesc: "Comparative metric value."
       }
     },
+    settings: {
+      title: "Analysis settings",
+      model: "Model",
+      period: "Data period",
+      periodHint: "A longer period gives the models more history to learn from, but analysis and benchmark take longer.",
+      periods: {
+        "6mo": "6 mo",
+        "1y": "1 year",
+        "2y": "2 years",
+        "5y": "5 years"
+      },
+      sensitivity: "Sensitivity",
+      sensitivityHint: "Share of sessions flagged as anomalies. Higher sensitivity = more alerts, but also more false ones. The benchmark injects the same share of anomalies."
+    },
     mode: {
       title: "Detection mode",
       batch: "Historical analysis",
       walk_forward: "No look-ahead",
       batchDesc: "The model learns from the whole period at once and scores each session knowing the entire history – including later sessions. Good for reviewing history, but it overstates performance compared to live monitoring.",
-      walk_forwardDesc: "Each session is scored by a model trained only on earlier sessions (retrained every 10 sessions), just like live market monitoring. The first 60 sessions are used only for training and are not scored."
+      walk_forwardDesc: "Each session is scored by a model trained only on earlier sessions (retrained every 10 sessions, less often for long periods), just like live market monitoring. The first 60 sessions are used only for training and are not scored."
     },
     charts: {
       priceTitle: "Price History & AI Signals",

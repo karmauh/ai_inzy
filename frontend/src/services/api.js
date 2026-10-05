@@ -60,8 +60,8 @@ export const generateAssessment = async (results, tickerInfo = null, language = 
     return response.data;
 };
 
-export const fetchMarketData = async (symbol) => {
-    const response = await client.get(`/market/data/${encodeURIComponent(symbol)}`);
+export const fetchMarketData = async (symbol, period = '1y') => {
+    const response = await client.get(`/market/data/${encodeURIComponent(symbol)}`, { params: { period } });
     return response.data;
 };
 

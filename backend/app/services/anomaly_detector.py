@@ -34,6 +34,9 @@ SUPPORTED_MODES = ('batch', 'walk_forward')
 # Walk-forward: minimalna liczba sesji treningowych i co ile sesji model jest douczany
 WALK_FORWARD_MIN_TRAIN = 60
 WALK_FORWARD_REFIT_EVERY = 10
+# Limit douczeń na analizę – przy długich okresach (np. 5 lat) model douczany jest rzadziej niż co 10 sesji,
+# aby czas obliczeń nie rósł liniowo z długością historii
+WALK_FORWARD_MAX_REFITS = 40
 # Część okna treningowego (najnowsze sesje) odkładana do kalibracji progu anomalii
 WALK_FORWARD_CALIBRATION_SHARE = 0.3
 WALK_FORWARD_MIN_CALIBRATION = 20
@@ -200,18 +203,24 @@ class AnomalyDetector:
         return -np.asarray(train, dtype=float), -np.asarray(test, dtype=float)
 
     @staticmethod
+    def walk_forward_refit_interval(n: int) -> int:
+        """Co ile sesji douczany jest model w trybie walk-forward dla szeregu długości n."""
+        return max(WALK_FORWARD_REFIT_EVERY, int(np.ceil((n - WALK_FORWARD_MIN_TRAIN) / WALK_FORWARD_MAX_REFITS)))
+
+    @staticmethod
     def _walk_forward(feats: pd.DataFrame, model_type: str, contamination: float):
         """
-        Ocena bez wglądu w przyszłość: sesje [start, start + REFIT_EVERY) oceniane są modelem
+        Ocena bez wglądu w przyszłość: sesje [start, start + refit_every) oceniane są modelem
         uczonym na wszystkich sesjach < start (okno rosnące). Imputacja, skalowanie i próg anomalii
         wyznaczane są wyłącznie z okna treningowego. Pierwsze MIN_TRAIN sesji nie jest oceniane.
         """
         n = len(feats)
         scores = np.full(n, np.nan)
         flags = np.zeros(n, dtype=bool)
+        refit_every = AnomalyDetector.walk_forward_refit_interval(n)
 
-        for start in range(WALK_FORWARD_MIN_TRAIN, n, WALK_FORWARD_REFIT_EVERY):
-            end = min(start + WALK_FORWARD_REFIT_EVERY, n)
+        for start in range(WALK_FORWARD_MIN_TRAIN, n, refit_every):
+            end = min(start + refit_every, n)
             train, test = feats.iloc[:start], feats.iloc[start:end]
 
             medians = train.median()
