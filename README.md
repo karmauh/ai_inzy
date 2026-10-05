@@ -10,15 +10,15 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 - **Wskaźniki Techniczne**: Automatyczne obliczanie m.in. RSI, MACD, Wstęg Bollingera, EMA oraz ATR.
 - **Interpretacja AI**: Generowanie raportów i rekomendacji (Kup/Sprzedaj) przy wsparciu modeli językowych (Google Gemini AI).
 - **Rozbudowany Dashboard i Wykresy**: Interfejs wizualizujący dane cenowe, wykryte anomalie, wydajność modeli oraz sygnały wejścia.
-- **Wielojęzyczność (i18n)**: Pełne wsparcie dla wielojęzycznego interfejsu (m.in. j. polski i j. angielski) dzięki zintegrowanemu Providerowi Języków.
+- **Wielojęzyczność (i18n)**: Interfejs, ocena AI i raport PDF w języku polskim i angielskim (własny `LanguageProvider`, wybór języka zapamiętywany w przeglądarce).
 
 ## 🛠 Technologie
 
-- **Backend**: FastAPI (Python 3.10)
-- **Frontend**: React + Vite (Tailwind CSS, Recharts, i18next do wielojęzyczności)
-- **ML/AI**: Scikit-Learn (m.in. Isolation Forest, LOF, SVM), PyTorch/TensorFlow (dla Autoencoderów), Google Gemini AI
-- **Infrastruktura**: Docker, PostgreSQL
-- **Jakość kodu**: Wdrożone testy jednostkowe i integracyjne dla API.
+- **Backend**: FastAPI (Python 3.11; minimalnie 3.9), Pydantic do walidacji zapytań
+- **Frontend**: React 18 + Vite (Tailwind CSS, Recharts, Axios)
+- **ML/AI**: Scikit-Learn (Isolation Forest, LOF, One-Class SVM), PyTorch (Autoencoder), Google Gemini (interpretacja wyników)
+- **Infrastruktura**: Docker + Docker Compose
+- **Jakość kodu**: testy jednostkowe i integracyjne API (pytest), testy frontendu (Vitest), ESLint
 
 ---
 
@@ -26,16 +26,18 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 
 ### Szybki Start (Docker) 🐳
 
-Najszybsza metoda uruchomienia całej infrastruktury (Backend + Frontend + Baza Danych).
+Najszybsza metoda uruchomienia całej aplikacji (Backend + Frontend).
 
 1. **Utwórz plik `.env`** w katalogu `/backend/` z kluczem API:
    ```env
    GEMINI_API_KEY="twój_google_ai_studio_api_key_tutaj"
+   # Opcjonalnie: dozwolone originy frontendu (rozdzielone przecinkami)
+   CORS_ORIGINS="http://localhost:5173"
    ```
 2. **Upewnij się, że masz zainstalowany Docker Desktop.**
 3. **Uruchom projekt jedną komendą:**
    ```powershell
-   docker-compose up --build
+   docker compose up --build
    ```
 4. **Dostęp do aplikacji:**
    - Frontend: [http://localhost:5173](http://localhost:5173)
@@ -56,8 +58,8 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    ```powershell
    python -m venv venv
    .\venv\Scripts\activate
-   pip install -r requirements.txt
    cd backend
+   pip install -r requirements-dev.txt
    uvicorn main:app --reload
    ```
 3. **Frontend**:
@@ -76,8 +78,8 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    ```bash
    python3 -m venv venv
    source venv/bin/activate
-   pip install -r requirements.txt
    cd backend
+   pip install -r requirements-dev.txt
    uvicorn main:app --reload
    ```
 3. **Frontend**:
@@ -86,6 +88,17 @@ Jeśli nie chcesz korzystać z Dockera, możesz uruchomić komponenty osobno.
    npm install
    npm run dev
    ```
+
+## 🧪 Testy i jakość kodu
+
+```bash
+# Backend (z katalogu backend/, w aktywnym venv)
+python -m pytest
+
+# Frontend (z katalogu frontend/)
+npm test
+npm run lint
+```
 
 ## 📂 Struktura Projektu
 
