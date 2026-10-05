@@ -24,3 +24,12 @@ def make_market_data(n: int = 250, seed: int = 0):
 @pytest.fixture
 def market_data():
     return make_market_data()
+
+
+@pytest.fixture(autouse=True)
+def clear_market_caches():
+    # Cache danych Yahoo jest globalny – każdy test zaczyna z pustym, by wyniki nie zależały od kolejności testów
+    from app.services.market_data import HISTORY_CACHE, INFO_CACHE
+    HISTORY_CACHE.clear()
+    INFO_CACHE.clear()
+    yield

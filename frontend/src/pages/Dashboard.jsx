@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react';
-import StockChart from '../components/StockChart';
-import TechnicalCharts from '../components/TechnicalCharts';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import TickerSearch from '../components/TickerSearch';
 import AssessmentPanel from '../components/AssessmentPanel';
-import ModelBenchmark from '../components/ModelBenchmark';
 import AnalysisSettings from '../components/AnalysisSettings';
 import ResultsTable from '../components/ResultsTable';
 import { analyzeData, fetchMarketData, exportCSV, exportPDF, evaluateModelsAPI, generateAssessment } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+
+// Wykresy i benchmark korzystają z biblioteki Recharts (największa część paczki JS) – ładujemy je dopiero,
+// gdy są potrzebne, dzięki czemu ekran startowy (wyszukiwarka) wczytuje się szybciej
+const StockChart = lazy(() => import('../components/StockChart'));
+const TechnicalCharts = lazy(() => import('../components/TechnicalCharts'));
+const ModelBenchmark = lazy(() => import('../components/ModelBenchmark'));
+
+const ChartFallback = () => (
+    <div className="h-[200px] flex items-center justify-center text-neutral-500 text-sm animate-pulse">…</div>
+);
 
 const DEFAULT_SETTINGS = { model: 'isolation_forest', period: '1y', contamination: 0.05, mode: 'batch' };
 const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS);
@@ -335,13 +342,15 @@ const Dashboard = () => {
             {/* Wizualizacja wyników Analizy */}
             {analysisResults && activeTab === 'analysis' && (
                 <div className="space-y-8 animate-fade-in-up">
-                     {/* Główny wykres giełdowy */}
-                     <div className="bg-neutral-800 p-6 rounded-lg shadow-lg">
-                        <StockChart data={analysisResults} />
-                     </div>
+                     <Suspense fallback={<ChartFallback />}>
+                         {/* Główny wykres giełdowy */}
+                         <div className="bg-neutral-800 p-6 rounded-lg shadow-lg">
+                            <StockChart data={analysisResults} />
+                         </div>
 
-                     {/* Siatka wykresów wskaźników technicznych */}
-                     <TechnicalCharts data={analysisResults} />
+                         {/* Siatka wykresów wskaźników technicznych */}
+                         <TechnicalCharts data={analysisResults} />
+                     </Suspense>
 
                      {/* Sekcja tabeli wyników */}
                      <ResultsTable rows={analysisResults} />
@@ -349,6 +358,7 @@ const Dashboard = () => {
             )}
             {/* Widok Benchmarku */}
             {activeTab === 'benchmark' && (
+                <Suspense fallback={<ChartFallback />}>
                 <ModelBenchmark
                     evaluationData={benchmarkData?.evaluation}
                     detectionMode={settings.mode}
@@ -359,6 +369,7 @@ const Dashboard = () => {
                     onRunBenchmark={() => handleRunBenchmark()}
                     onSelectModel={handleSelectModelFromBenchmark}
                 />
+                </Suspense>
             )}
         </div>
     );
