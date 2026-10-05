@@ -46,7 +46,7 @@ def test_injection_is_reproducible_and_recomputes_indicators(market_data):
 
 def test_evaluate_models_uses_fraction_as_contamination(market_data):
     with patch('app.services.evaluation_service.AnomalyDetector.detect_anomalies',
-               side_effect=lambda data, model_type, contamination: [{'is_anomaly': False} for _ in data]) as mock_detect:
+               side_effect=lambda data, **kwargs: [{'is_anomaly': False, 'anomaly_score': 0.0} for _ in data]) as mock_detect:
         EvaluationService.evaluate_models(market_data, fraction=0.1, models=['lof'])
 
     assert mock_detect.call_args.kwargs['contamination'] == 0.1
@@ -67,7 +67,7 @@ def test_evaluate_models_returns_mean_and_std_over_runs(market_data):
 
 def test_evaluate_models_runs_each_seed_once_per_model(market_data):
     with patch('app.services.evaluation_service.AnomalyDetector.detect_anomalies',
-               side_effect=lambda data, model_type, contamination: [{'is_anomaly': False} for _ in data]) as mock_detect:
+               side_effect=lambda data, **kwargs: [{'is_anomaly': False, 'anomaly_score': 0.0} for _ in data]) as mock_detect:
         EvaluationService.evaluate_models(market_data, fraction=0.05, models=['lof', 'ocsvm'], n_runs=3)
 
     assert mock_detect.call_count == 6
@@ -199,3 +199,33 @@ def test_default_models_are_used_without_env(monkeypatch):
     monkeypatch.delenv("GEMINI_MODELS", raising=False)
 
     assert _gemini_models()[0] == "gemini-3.5-flash-lite"
+
+
+def test_walk_forward_evaluation_injects_only_into_scored_sessions(market_data, monkeypatch):
+    from app.services.anomaly_detector import WALK_FORWARD_MIN_TRAIN
+    monkeypatch.setenv("EVALUATION_WORKERS", "1")
+    result = EvaluationService.evaluate_models(market_data, fraction=0.05, models=['lof'], n_runs=2, mode='walk_forward')
+
+    scored = len(market_data) - WALK_FORWARD_MIN_TRAIN
+    assert result['metadata']['scored_records'] == scored
+    assert result['evaluation']['lof']['summary']['total_ground_truth'] == int(np.ceil(scored * 0.05))
+
+
+def test_walk_forward_evaluation_parallel_matches_sequential(market_data, monkeypatch):
+    from app.services import evaluation_service
+    kwargs = dict(fraction=0.05, models=['isolation_forest', 'autoencoder'], n_runs=2, mode='walk_forward')
+
+    monkeypatch.setenv("EVALUATION_WORKERS", "1")
+    sequential = EvaluationService.evaluate_models(market_data, **kwargs)
+    monkeypatch.setenv("EVALUATION_WORKERS", "2")
+    try:
+        parallel = EvaluationService.evaluate_models(market_data, **kwargs)
+    finally:
+        evaluation_service.shutdown_pool()
+
+    assert parallel == sequential
+
+
+def test_walk_forward_evaluation_rejects_too_little_data(market_data):
+    with pytest.raises(ValueError, match="Walk-forward"):
+        EvaluationService.evaluate_models(market_data[:40], mode='walk_forward')

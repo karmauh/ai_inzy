@@ -46,7 +46,7 @@ const CustomTooltip = ({ active, payload, label, t }) => {
     return null;
 };
 
-const ModelBenchmark = ({ evaluationData, nRuns, loading, onRunBenchmark, onSelectModel }) => {
+const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, loading, onRunBenchmark, onSelectModel }) => {
     const { t } = useLanguage();
     const [primaryMetric, setPrimaryMetric] = useState('f1_score');
     const [sortConfig, setSortConfig] = useState({ key: 'f1_score', direction: 'desc' });
@@ -59,6 +59,9 @@ const ModelBenchmark = ({ evaluationData, nRuns, loading, onRunBenchmark, onSele
                     <div className="animate-spin text-5xl mb-6">🔄</div>
                     <p className="text-white font-bold text-lg">{t('benchmark.loading.title')}</p>
                     <p className="text-sm text-neutral-400 mt-2">{t('benchmark.loading.subtitle')}</p>
+                    {detectionMode === 'walk_forward' && (
+                        <p className="text-xs text-neutral-500 mt-2">{t('benchmark.loading.walkForward')}</p>
+                    )}
                 </div>
             </div>
         );

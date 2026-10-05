@@ -16,7 +16,7 @@ def evaluate_models_endpoint(request: EvaluateRequest):
     wstrzykując zadaną frakcję syntetycznych anomalii do danych wejściowych.
     """
     try:
-        results = EvaluationService.evaluate_models(request.data, fraction=request.fraction, models=request.models, n_runs=request.n_runs)
+        results = EvaluationService.evaluate_models(request.data, fraction=request.fraction, models=request.models, n_runs=request.n_runs, mode=request.mode)
     except (KeyError, ValueError, TypeError) as e:
         logger.exception("Błąd podczas ewaluacji modeli")
         raise HTTPException(status_code=400, detail=f"Nieprawidłowe dane do ewaluacji: {e}")

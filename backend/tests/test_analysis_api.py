@@ -127,3 +127,18 @@ def test_evaluate_endpoint_validates_n_runs(request_payload, n_runs):
     response = client.post("/api/v1/evaluation/evaluate", json={"data": request_payload["data"], "n_runs": n_runs})
 
     assert response.status_code == 422
+
+
+def test_analyze_walk_forward_with_too_little_data_returns_400(request_payload):
+    request_payload["mode"] = "walk_forward"
+    response = client.post("/api/v1/analyze", json=request_payload)
+
+    assert response.status_code == 400
+    assert "Walk-forward" in response.json()["detail"]
+
+
+def test_analyze_rejects_unknown_mode(request_payload):
+    request_payload["mode"] = "future"
+    response = client.post("/api/v1/analyze", json=request_payload)
+
+    assert response.status_code == 422

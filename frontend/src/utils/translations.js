@@ -25,7 +25,8 @@ export const translations = {
       },
       loading: {
         title: "Inicjalizacja i weryfikacja algorytmów...",
-        subtitle: "Wstrzykiwanie syntetycznych usterek. Modele głębokiego uczenia trenują struktury w locie!"
+        subtitle: "Wstrzykiwanie syntetycznych usterek. Modele głębokiego uczenia trenują struktury w locie!",
+        walkForward: "Tryb bez wglądu w przyszłość doucza modele kilkadziesiąt razy na przebieg – może to potrwać do ok. 15 sekund."
       },
       empty: {
         title: "Panel Ewaluacji Rozszerzonej Zablokowany",
@@ -90,6 +91,13 @@ export const translations = {
         f1Desc: "Optymalny balans (Uśredniona wartość harmoniczna precyzji i czułości)",
         defaultDesc: "Wartość metryki porównawczej modeli."
       }
+    },
+    mode: {
+      title: "Tryb detekcji",
+      batch: "Analiza historyczna",
+      walk_forward: "Bez wglądu w przyszłość",
+      batchDesc: "Model uczy się na całym okresie naraz i ocenia każdą sesję z wiedzą o całej historii – także o sesjach późniejszych. Dobre do przeglądu historii, ale zawyża skuteczność względem pracy na bieżąco.",
+      walk_forwardDesc: "Każda sesja oceniana jest modelem uczonym wyłącznie na wcześniejszych sesjach (douczanie co 10 sesji), tak jak przy monitorowaniu rynku na bieżąco. Pierwsze 60 sesji służy tylko do nauki modelu i nie jest oceniane."
     },
     charts: {
       priceTitle: "Historia Cen i Sygnały AI",
@@ -160,7 +168,8 @@ export const translations = {
       },
       loading: {
         title: "Initializing and verifying algorithms...",
-        subtitle: "Injecting synthetic anomalies. Deep learning models train structures on the fly!"
+        subtitle: "Injecting synthetic anomalies. Deep learning models train structures on the fly!",
+        walkForward: "No look-ahead mode retrains models dozens of times per run – this may take up to ~15 seconds."
       },
       empty: {
         title: "Extended Evaluation Panel Locked",
@@ -225,6 +234,13 @@ export const translations = {
         f1Desc: "Optimal balance (Harmonic mean of precision and recall)",
         defaultDesc: "Comparative metric value."
       }
+    },
+    mode: {
+      title: "Detection mode",
+      batch: "Historical analysis",
+      walk_forward: "No look-ahead",
+      batchDesc: "The model learns from the whole period at once and scores each session knowing the entire history – including later sessions. Good for reviewing history, but it overstates performance compared to live monitoring.",
+      walk_forwardDesc: "Each session is scored by a model trained only on earlier sessions (retrained every 10 sessions), just like live market monitoring. The first 60 sessions are used only for training and are not scored."
     },
     charts: {
       priceTitle: "Price History & AI Signals",

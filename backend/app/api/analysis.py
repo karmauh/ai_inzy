@@ -2,7 +2,7 @@ from app.services.llm_service import LLMService
 from app.services.anomaly_detector import AnomalyDetector
 from app.schemas import AnalyzeRequest, AssessmentRequest
 from app.utils.json_utils import sanitize_json
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.encoders import jsonable_encoder
 
 router = APIRouter()
@@ -13,7 +13,11 @@ def analyze_data(request: AnalyzeRequest):
     """
     Analizuje dane pod kątem anomalii i generuje ocenę AI.
     """
-    results = AnomalyDetector.detect_anomalies(request.data, request.model_type, request.contamination)
+    try:
+        results = AnomalyDetector.detect_anomalies(request.data, request.model_type, request.contamination, request.mode)
+    except ValueError as e:
+        # Np. za mało danych dla trybu walk-forward
+        raise HTTPException(status_code=400, detail=str(e))
     assessment = LLMService.generate_assessment(results, request.ticker_info, request.language)
 
     return jsonable_encoder(sanitize_json({

@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -9,11 +10,19 @@ from app.api.analysis import router as analysis_router
 from app.api.export import router as export_router
 from app.api.market import router as market_router
 from app.api.evaluation import router as evaluation_router
+from app.services.evaluation_service import shutdown_pool
 
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-app = FastAPI(title="StockGuard AI API")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    # Zamknięcie procesów puli ewaluacji – inaczej zostają osierocone po restarcie/zatrzymaniu serwera
+    shutdown_pool()
+
+
+app = FastAPI(title="StockGuard AI API", lifespan=lifespan)
 
 # Lista dozwolonych originów rozdzielona przecinkami (domyślnie serwer deweloperski Vite)
 cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]

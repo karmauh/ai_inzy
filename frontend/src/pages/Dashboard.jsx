@@ -28,6 +28,9 @@ const Dashboard = () => {
     // Stan wyboru aktualnego modelu (powiązanie z Benchmarkiem)
     const [currentModel, setCurrentModel] = useState('isolation_forest');
 
+    // Tryb detekcji: 'batch' (analiza historyczna) lub 'walk_forward' (bez wglądu w przyszłość)
+    const [detectionMode, setDetectionMode] = useState('batch');
+
     // Po zmianie języka generujemy tylko brakującą ocenę AI (bez ponownego uruchamiania modelu ML)
     useEffect(() => {
         if (!analysisResults || assessments[language] || loadingAnalysis) return;
@@ -102,11 +105,12 @@ const Dashboard = () => {
         }
     };
 
-    const runAnalysis = async (dataPoints = null, tickerInfoOverride = null, modelOverride = null) => {
+    const runAnalysis = async (dataPoints = null, tickerInfoOverride = null, modelOverride = null, modeOverride = null) => {
         // Określenie źródła danych: przekazany argument lub aktualne wyniki analizy
         const points = dataPoints || analysisResults;
         const info = tickerInfoOverride || tickerInfo;
         const modelToUse = modelOverride || currentModel;
+        const modeToUse = modeOverride || detectionMode;
 
         if (!points) return;
         
@@ -114,7 +118,7 @@ const Dashboard = () => {
         setError(null);
         try {
             // Wywołanie API analizy anomalii i interpretacji AI
-            const results = await analyzeData(points, modelToUse, 0.05, info, language);
+            const results = await analyzeData(points, modelToUse, 0.05, info, language, modeToUse);
             
             // Aktualizacja stanu wynikami z backendu
             setAnalysisResults(results.results);
@@ -129,13 +133,21 @@ const Dashboard = () => {
         }
     };
 
+    const handleModeChange = (mode) => {
+        if (mode === detectionMode || loadingAnalysis) return;
+        setDetectionMode(mode);
+        // Benchmark dotyczył poprzedniego trybu – zostanie policzony ponownie na żądanie
+        setBenchmarkData(null);
+        runAnalysis(null, null, null, mode);
+    };
+
     const handleRunBenchmark = async () => {
         setActiveTab('benchmark');
         if (benchmarkData) return; // Unikamy podwójnego żądania
         
         setLoadingBenchmark(true);
         try {
-            const results = await evaluateModelsAPI(analysisResults);
+            const results = await evaluateModelsAPI(analysisResults, 0.05, undefined, detectionMode);
             setBenchmarkData(results);
         } catch (err) {
             console.error("Benchmark failed:", err);
@@ -239,6 +251,28 @@ const Dashboard = () => {
                  </div>
             </div>
 
+            {/* Wybór trybu detekcji */}
+            {analysisResults && (
+                <div className="mb-6 mx-auto max-w-3xl bg-neutral-800 p-4 rounded-xl border border-neutral-700 shadow-lg animate-fade-in-up">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider shrink-0">{t('mode.title')}</span>
+                        <div className="flex bg-neutral-900 rounded-lg p-1 border border-neutral-700">
+                            {['batch', 'walk_forward'].map((mode) => (
+                                <button
+                                    key={mode}
+                                    onClick={() => handleModeChange(mode)}
+                                    disabled={loadingAnalysis}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded transition-all disabled:cursor-wait ${detectionMode === mode ? 'bg-primary-600 text-white shadow' : 'text-neutral-400 hover:text-white'}`}
+                                >
+                                    {t(`mode.${mode}`)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-3 leading-relaxed">{t(`mode.${detectionMode}Desc`)}</p>
+                </div>
+            )}
+
             {/* Widoki zakładek */}
             {analysisResults && (
                 <div className="mb-6 flex space-x-2 bg-neutral-800 p-1.5 rounded-xl w-fit mx-auto border border-neutral-700 shadow-lg animate-fade-in-up">
@@ -315,6 +349,7 @@ const Dashboard = () => {
             {activeTab === 'benchmark' && (
                 <ModelBenchmark
                     evaluationData={benchmarkData?.evaluation}
+                    detectionMode={detectionMode}
                     nRuns={benchmarkData?.metadata?.n_runs}
                     loading={loadingBenchmark}
                     onRunBenchmark={handleRunBenchmark}

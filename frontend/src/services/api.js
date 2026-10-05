@@ -39,11 +39,12 @@ export const exportPDF = async (data, assessment, tickerInfo, language) => {
     downloadFile(response, `analysis_report_${language}.pdf`);
 };
 
-export const analyzeData = async (data, modelType = 'isolation_forest', contamination = 0.05, tickerInfo = null, language = 'pl') => {
+export const analyzeData = async (data, modelType = 'isolation_forest', contamination = 0.05, tickerInfo = null, language = 'pl', mode = 'batch') => {
     const response = await client.post('/analyze', {
         data,
         model_type: modelType,
         contamination,
+        mode,
         ticker_info: tickerInfo,
         language
     });
@@ -64,11 +65,12 @@ export const fetchMarketData = async (symbol) => {
     return response.data;
 };
 
-export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder']) => {
+export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'], mode = 'batch') => {
     const response = await client.post('/evaluation/evaluate', {
         data,
         fraction,
-        models
+        models,
+        mode
     });
     return response.data;
 };

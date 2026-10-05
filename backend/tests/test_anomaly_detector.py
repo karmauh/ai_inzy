@@ -116,3 +116,41 @@ def test_flagged_points_have_highest_scores(market_data):
     normal = [r['anomaly_score'] for r in results if not r['is_anomaly']]
 
     assert min(flagged) >= max(normal)
+
+
+# --- Tryb walk-forward (bez wglądu w przyszłość) ---
+
+@pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder"])
+def test_walk_forward_does_not_look_ahead(market_data, model_type):
+    # Zmiana przyszłych notowań nie może zmienić oceny wcześniejszych sesji
+    cut = 150
+    altered = [dict(row) for row in market_data]
+    for row in altered[cut:]:
+        row.update({'close': row['close'] * 3, 'volume': row['volume'] * 10})
+
+    original = AnomalyDetector.detect_anomalies(market_data, model_type=model_type, mode="walk_forward")
+    changed = AnomalyDetector.detect_anomalies(altered, model_type=model_type, mode="walk_forward")
+
+    assert [r['anomaly_score'] for r in original[:cut]] == [r['anomaly_score'] for r in changed[:cut]]
+    assert [r['is_anomaly'] for r in original[:cut]] == [r['is_anomaly'] for r in changed[:cut]]
+
+
+def test_walk_forward_skips_warmup_period(market_data):
+    from app.services.anomaly_detector import WALK_FORWARD_MIN_TRAIN
+    results = AnomalyDetector.detect_anomalies(market_data, model_type="lof", mode="walk_forward")
+
+    assert all(r['anomaly_score'] is None and not r['is_anomaly'] for r in results[:WALK_FORWARD_MIN_TRAIN])
+    assert all(r['anomaly_score'] is not None for r in results[WALK_FORWARD_MIN_TRAIN:])
+    assert any(r['is_anomaly'] for r in results)
+
+
+def test_walk_forward_requires_enough_data(sample_data):
+    with pytest.raises(ValueError, match="Walk-forward"):
+        AnomalyDetector.detect_anomalies(sample_data, model_type="lof", mode="walk_forward")
+
+
+def test_batch_mode_is_default_and_unchanged(market_data):
+    default = AnomalyDetector.detect_anomalies(market_data, model_type="isolation_forest")
+    batch = AnomalyDetector.detect_anomalies(market_data, model_type="isolation_forest", mode="batch")
+
+    assert default == batch
