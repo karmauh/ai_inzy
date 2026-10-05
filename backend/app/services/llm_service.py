@@ -1,160 +1,185 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import os
-import requests
 import json
+import logging
 import re
+import time
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+GEMINI_TIMEOUT_SECONDS = 30
+GEMINI_MAX_ATTEMPTS = 2
+GEMINI_RETRY_DELAY_SECONDS = 1.5
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
+# Kanoniczne wartości zwracane przez API (tłumaczone po stronie frontendu i raportu PDF).
+# Klucze słowników to warianty, które może zwrócić model (małe litery).
+_SENTIMENT_ALIASES = {
+    "bullish": "Bullish", "byczy": "Bullish", "wzrostowy": "Bullish",
+    "bearish": "Bearish", "niedźwiedzi": "Bearish", "spadkowy": "Bearish",
+    "neutral": "Neutral", "neutralny": "Neutral",
+}
+_RECOMMENDATION_ALIASES = {
+    "buy": "Buy", "kupuj": "Buy", "kup": "Buy",
+    "sell": "Sell", "sprzedaj": "Sell",
+    "hold": "Hold", "trzymaj": "Hold",
+}
+_CONFIDENCE_ALIASES = {
+    "high": "High", "wysoka": "High",
+    "medium": "Medium", "średnia": "Medium",
+    "low": "Low", "niska": "Low",
+}
+
+_MESSAGES = {
+    "no_data": {"pl": "Brak danych do analizy.", "en": "No data available."},
+    "no_key": {
+        "pl": "Brak klucza API (GEMINI_API_KEY) dla modelu LLM w pliku .env.",
+        "en": "Missing LLM API key (GEMINI_API_KEY) in the .env file.",
+    },
+    "unavailable": {
+        "pl": "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.",
+        "en": "The AI service is temporarily unavailable. Please try again later.",
+    },
+}
+
+
+def _normalize(value: Any, aliases: Dict[str, str], default: str) -> str:
+    if not isinstance(value, str):
+        return default
+    return aliases.get(value.strip().lower(), default)
+
+
+def _fallback(message_key: str, language: str) -> Dict[str, Any]:
+    return {
+        "sentiment": "Neutral",
+        "recommendation": "Hold",
+        "summary": _MESSAGES[message_key][language],
+        "confidence": "Low",
+    }
+
+
 class LLMService:
     @staticmethod
-    def generate_assessment(data: List[Dict[str, Any]], anomalies: List[Dict[str, Any]], ticker_info: Dict[str, Any] = None, language: str = 'pl') -> Dict[str, Any]:
-        """
-        Generuje ocenę i interpretację wyników analizy używając modelu LLM (Google Gemini).
-        """
-        if not anomalies:
-            return {
-                "sentiment": "Neutral",
-                "recommendation": "Hold",
-                "summary": "No data available." if language == 'en' else "Brak danych do analizy.",
-                "confidence": "Low"
-            }
-            
-        last_point = anomalies[-1]
-        
-        ticker_str = f"Ticker: {ticker_info.get('symbol', 'N/A')} ({ticker_info.get('name', 'N/A')})" if ticker_info else "Ticker: Nieznany"
-        
-        # Pobieranie parametryzacji
+    def build_prompt(last_point: Dict[str, Any], ticker_info: Optional[Dict[str, Any]], language: str) -> str:
         def fmt(val):
-            return f"{val:.2f}" if isinstance(val, (int, float)) else str(val)
+            return f"{val:.2f}" if isinstance(val, (int, float)) and not isinstance(val, bool) else "brak danych"
 
-        close = fmt(last_point.get('close', 'N/A'))
-        rsi = fmt(last_point.get('rsi', 'N/A'))
-        macd = fmt(last_point.get('macd', 'N/A'))
-        macd_signal = fmt(last_point.get('macd_signal', 'N/A'))
-        ema_20 = fmt(last_point.get('ema_20', 'N/A'))
-        ema_50 = fmt(last_point.get('ema_50', 'N/A'))
-        atr = fmt(last_point.get('atr', 'N/A'))
-        bb_upper = fmt(last_point.get('bb_upper', 'N/A'))
-        bb_lower = fmt(last_point.get('bb_lower', 'N/A'))
-        is_anomaly = last_point.get('is_anomaly', False)
-        
+        ticker_str = (
+            f"Ticker: {ticker_info.get('symbol', 'N/A')} ({ticker_info.get('name', 'N/A')})"
+            if ticker_info else "Ticker: Nieznany"
+        )
         lang_instruction = "angielskim" if language == "en" else "polskim"
+        is_anomaly = last_point.get('is_anomaly', False)
 
-        # Główny prompt przekazany przez użytkownika
-        system_prompt = f"""
+        return f"""
 Jesteś asystentem-analitykiem rynków finansowych w aplikacji StockGuard AI.
-Otrzymujesz przetworzone dane techniczne dla jednego instrumentu (akcja, ETF lub indeks): ceny, wskaźniki techniczne (RSI, MACD, Bollinger Bands, EMA, ATR), informację o anomaliach oraz podstawowe metadane (ticker, interwał, zakres dat).
+Otrzymujesz przetworzone dane techniczne dla jednego instrumentu (akcja, ETF lub indeks): cenę, wskaźniki techniczne (RSI, MACD, Bollinger Bands, EMA, ATR) oraz informację o anomalii statystycznej.
 Twoim zadaniem jest:
 
 - Krótko podsumować aktualną sytuację rynkową instrumentu.
 - Zinterpretować wskaźniki techniczne (co oznacza poziom RSI, sygnały MACD, wybicia poza wstęgi Bollingera, zmienność z ATR, kierunek trendu na podstawie EMA).
-- Wspomnieć o wykrytych anomaliach (np. nietypowe wolumeny, gwałtowne ruchy cenowe) i co mogą sugerować.
-- Na końcu sformułować prostą rekomendację w formacie: Rekomendacja: [Kupuj / Trzymaj / Sprzedaj] wraz z 2–3 zdaniami uzasadnienia.
+- Wspomnieć o wykrytej anomalii (jeśli występuje) i co może sugerować.
+- Na końcu sformułować prostą rekomendację wraz z 2–3 zdaniami uzasadnienia.
 
 Zasady:
-- Pisz formatując kluczowe słowa w tekście (używaj znaczników Markdown `**pogrubienie**` do wyróżniania mniejszych pojęć zamiast kropek).
-- Przejrzyście podziel odpowiedź dokładnie na 2 do 3 akapitów, nie twórz jednolitej ściany tekstu.
+- Wyróżniaj kluczowe pojęcia znacznikami Markdown `**pogrubienie**`.
+- Podziel odpowiedź na 2 do 3 akapitów, nie twórz jednolitej ściany tekstu.
 - Używaj prostego języka, ale z poprawną terminologią techniczną.
 - Nie podawaj konkretnych cen docelowych ani gwarancji wyniku.
 - Jeśli dane są sprzeczne lub niejednoznaczne, wyraźnie to zaznacz i wybierz bardziej zachowawczą rekomendację.
 - Jeśli brakuje jakiegoś wskaźnika, powiedz „brak danych” zamiast zgadywać.
 - Odpowiadaj w języku {lang_instruction}, ale nazwy wskaźników (RSI, MACD, itp.) zostaw w oryginale.
 
-KONIECZNIE NA SAMYM KOŃCU SWOJEJ ODPOWIEDZI WYGENERUJ ODDZIELNĄ SEKCJE W FORMACIE JSON (aby system mógł ją łatwo parsować do interfejsu TheDashboard):
+KONIECZNIE NA SAMYM KOŃCU ODPOWIEDZI DODAJ BLOK JSON. Wartości pól podaj ZAWSZE po angielsku, dokładnie jedną z wymienionych opcji (niezależnie od języka odpowiedzi):
 ```json
 {{
-  "sentiment": "Byczy / Niedźwiedzi / Neutralny" (lub odpowiednik w EN jeśli język to EN),
-  "recommendation": "Kupuj / Trzymaj / Sprzedaj" (lub Buy / Hold / Sell jeśli EN),
-  "confidence": "Wysoka / Średnia / Niska" (lub High / Medium / Low jeśli EN)
+  "sentiment": "Bullish" | "Bearish" | "Neutral",
+  "recommendation": "Buy" | "Hold" | "Sell",
+  "confidence": "High" | "Medium" | "Low"
 }}
 ```
 
 Dane techniczne rynkowe:
 -------------------------
 {ticker_str}
-Ostatnia cena zamknięcia: {close}
-RSI(14): {rsi}
-MACD: {macd} (Signal: {macd_signal})
-EMA(20): {ema_20}
-EMA(50): {ema_50}
-ATR(14): {atr}
-Wstęgi Bollingera (Górna/Dolna): {bb_upper} / {bb_lower}
+Ostatnia cena zamknięcia: {fmt(last_point.get('close'))}
+RSI(14): {fmt(last_point.get('rsi'))}
+MACD: {fmt(last_point.get('macd'))} (Signal: {fmt(last_point.get('macd_signal'))})
+EMA(20): {fmt(last_point.get('ema_20'))}
+EMA(50): {fmt(last_point.get('ema_50'))}
+ATR(14): {fmt(last_point.get('atr'))}
+Wstęgi Bollingera (Górna/Dolna): {fmt(last_point.get('bb_upper'))} / {fmt(last_point.get('bb_lower'))}
 Czy wykryto anomalię statystyczną na ostatniej sesji?: {'Tak' if is_anomaly else 'Nie'}
 -------------------------
 """
 
+    @staticmethod
+    def parse_response(text_output: str) -> Dict[str, Any]:
+        """
+        Rozdziela treść raportu od końcowego bloku JSON i normalizuje pola do wartości kanonicznych.
+        """
+        json_match = re.search(r'```json\s*(\{.*?\})\s*```', text_output, re.DOTALL | re.IGNORECASE)
+        parsed: Dict[str, Any] = {}
+        summary = text_output.strip()
+
+        if json_match:
+            summary = text_output[:json_match.start()].strip()
+            try:
+                parsed = json.loads(json_match.group(1))
+            except json.JSONDecodeError:
+                logger.warning("Nie udało się sparsować bloku JSON z odpowiedzi LLM")
+
+        recommendation = parsed.get("recommendation")
+        if recommendation is None:
+            # Fallback: linia "Rekomendacja: X" / "Recommendation: X" w treści
+            rec_match = re.search(r'(?:Rekomendacja|Recommendation)\**\s*:\s*\**\s*([\wąćęłńóśźż]+)', summary, re.IGNORECASE)
+            recommendation = rec_match.group(1) if rec_match else None
+
+        return {
+            "sentiment": _normalize(parsed.get("sentiment"), _SENTIMENT_ALIASES, "Neutral"),
+            "recommendation": _normalize(recommendation, _RECOMMENDATION_ALIASES, "Hold"),
+            "summary": summary,
+            "confidence": _normalize(parsed.get("confidence"), _CONFIDENCE_ALIASES, "Medium"),
+        }
+
+    @staticmethod
+    def generate_assessment(results: List[Dict[str, Any]], ticker_info: Optional[Dict[str, Any]] = None, language: str = 'pl') -> Dict[str, Any]:
+        """
+        Generuje ocenę i interpretację wyników analizy używając modelu LLM (Google Gemini).
+        Pola sentiment/recommendation/confidence mają wartości kanoniczne (EN), summary jest w wybranym języku.
+        """
+        language = language if language in ('pl', 'en') else 'pl'
+        if not results:
+            return _fallback("no_data", language)
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            return {
-                "sentiment": "Neutral",
-                "recommendation": "Hold",
-                "summary": "Błąd: Brak klucza API (GEMINI_API_KEY) dla modelu LLM w pliku .env.",
-                "confidence": "Low"
-            }
+            return _fallback("no_key", language)
 
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": api_key
-        }
-        
-        request_data = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": system_prompt
-                        }
-                    ]
-                }
-            ]
-        }
+        prompt = LLMService.build_prompt(results[-1], ticker_info, language)
 
         try:
-            response = requests.post(url, headers=headers, json=request_data)
+            for attempt in range(GEMINI_MAX_ATTEMPTS):
+                response = requests.post(
+                    GEMINI_URL,
+                    headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    timeout=GEMINI_TIMEOUT_SECONDS,
+                )
+                # Chwilowe przeciążenie / limit zapytań – jedna ponowna próba po krótkiej przerwie
+                if response.status_code in _RETRYABLE_STATUS and attempt < GEMINI_MAX_ATTEMPTS - 1:
+                    logger.warning("Gemini API zwróciło %s, ponawiam próbę", response.status_code)
+                    time.sleep(GEMINI_RETRY_DELAY_SECONDS)
+                    continue
+                break
             response.raise_for_status()
-            resp_json = response.json()
-            
-            # Wypakowywanie odpowiedzi Gemini
-            text_output = resp_json["candidates"][0]["content"]["parts"][0]["text"]
-            
-            # Próba parsowania JSON z formatowania LLM-a
-            json_match = re.search(r'```json\s*(\{.*?\})\s*```', text_output, re.DOTALL | re.IGNORECASE)
-            
-            if json_match:
-                parsed_json = json.loads(json_match.group(1))
-                sentiment = parsed_json.get("sentiment", "Neutral")
-                recommendation = parsed_json.get("recommendation", "Hold")
-                confidence = parsed_json.get("confidence", "Medium")
-                # Oddzielenie tresci raportu od bloku technicznego JSON
-                raw_summary = text_output[:json_match.start()].strip()
-            else:
-                raw_summary = text_output.strip()
-                sentiment = "Neutral"
-                confidence = "Medium"
-                
-                # Zgrzebny Fallback
-                if "Kupuj" in raw_summary or "Kup" in raw_summary or "Buy" in raw_summary:
-                    recommendation = "Kupuj" if language == "pl" else "Buy"
-                elif "Sprzedaj" in raw_summary or "Sell" in raw_summary:
-                    recommendation = "Sprzedaj" if language == "pl" else "Sell"
-                else:
-                    recommendation = "Trzymaj" if language == "pl" else "Hold"
-
-            return {
-                "sentiment": sentiment,
-                "recommendation": recommendation,
-                "summary": raw_summary,
-                "confidence": confidence
-            }
-            
-        except Exception as e:
-            print("Błąd łączenia z Gemini API:", str(e))
-            return {
-                "sentiment": "Neutral",
-                "recommendation": "Hold",
-                "summary": f"Nie udało się połączyć z usługą AI: {str(e)}",
-                "confidence": "Low"
-            }
+            text_output = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            return LLMService.parse_response(text_output)
+        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
+            logger.exception("Błąd komunikacji z Gemini API")
+            return _fallback("unavailable", language)
