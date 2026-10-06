@@ -1,6 +1,10 @@
 export const translations = {
   pl: {
     appTitle: "StockGuard AI",
+    disclaimer: {
+      title: "Zastrzeżenie",
+      text: "Wyniki prezentowane w aplikacji (wykryte anomalie, wskaźniki techniczne oraz ocena i sugestie AI) mają charakter wyłącznie informacyjny i edukacyjny. Nie stanowią rekomendacji inwestycyjnej ani porady inwestycyjnej w rozumieniu przepisów o obrocie instrumentami finansowymi, w szczególności ustawy z dnia 29 lipca 2005 r. o obrocie instrumentami finansowymi oraz rozporządzenia (UE) nr 596/2014 (MAR). Decyzje inwestycyjne podejmujesz samodzielnie i na własne ryzyko.",
+    },
     dashboard: {
       searchPlaceholder: "Wpisz symbol (np. NVDA, BTC-USD)",
       searchButton: "Szukaj i Analizuj",
@@ -169,6 +173,7 @@ export const translations = {
       recommendation: "Rekomendacja",
       confidence: "Pewność",
       summary: "Podsumowanie Analizy",
+      disclaimer: "Rekomendacja wygenerowana automatycznie przez model AI – nie stanowi rekomendacji inwestycyjnej ani porady inwestycyjnej.",
       values: {
         Bullish: "Byczy",
         Bearish: "Niedźwiedzi",
@@ -217,6 +222,10 @@ export const translations = {
   },
   en: {
     appTitle: "StockGuard AI",
+    disclaimer: {
+      title: "Disclaimer",
+      text: "The results shown in this application (detected anomalies, technical indicators and the AI assessment and suggestions) are for informational and educational purposes only. They do not constitute an investment recommendation or investment advice within the meaning of the regulations on trading in financial instruments, in particular the Polish Act of 29 July 2005 on Trading in Financial Instruments and Regulation (EU) No 596/2014 (MAR). You make investment decisions on your own and at your own risk.",
+    },
     dashboard: {
       searchPlaceholder: "Enter symbol (e.g., NVDA, BTC-USD)",
       searchButton: "Search & Analyze",
@@ -385,6 +394,7 @@ export const translations = {
       recommendation: "Recommendation",
       confidence: "Confidence",
       summary: "Analysis Summary",
+      disclaimer: "Recommendation generated automatically by an AI model – it is not an investment recommendation or investment advice.",
       values: {
         Bullish: "Bullish",
         Bearish: "Bearish",

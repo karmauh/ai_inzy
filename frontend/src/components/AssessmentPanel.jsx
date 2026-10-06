@@ -63,6 +63,10 @@ const AssessmentPanel = ({ assessment }) => {
                     {renderSummary(summary)}
                 </div>
             </div>
+
+            <p className="px-6 py-3 border-t border-neutral-700 text-xs text-amber-300/80 leading-relaxed">
+                ⚠️ {t('assessment.disclaimer')}
+            </p>
         </div>
     );
 };

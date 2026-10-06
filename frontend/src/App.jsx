@@ -39,6 +39,16 @@ const AppContent = () => {
       <div className="container mx-auto p-4 md:p-8">
         <Dashboard />
       </div>
+
+      {/* Zastrzeżenie prawne – widoczne zawsze, niezależnie od stanu analizy */}
+      <footer className="border-t border-neutral-800 bg-neutral-900/80">
+        <div className="container mx-auto px-4 md:px-8 py-6">
+          <p className="text-xs text-neutral-500 leading-relaxed max-w-4xl">
+            <span className="font-semibold text-neutral-400">⚠️ {t('disclaimer.title')}: </span>
+            {t('disclaimer.text')}
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
