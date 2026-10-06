@@ -1,0 +1,200 @@
+{
+ "evaluation": {
+  "isolation_forest": {
+   "metrics": {
+    "precision": 0.7719999999999999,
+    "recall": 0.7719999999999999,
+    "f1_score": 0.7719999999999999
+   },
+   "metrics_std": {
+    "precision": 0.08953211714239757,
+    "recall": 0.08953211714239757,
+    "f1_score": 0.08953211714239757
+   },
+   "confusion_matrix": {
+    "true_negatives": 469.3,
+    "false_positives": 5.7,
+    "false_negatives": 5.7,
+    "true_positives": 19.3
+   },
+   "summary": {
+    "total_anomalies_detect": 25.0,
+    "total_ground_truth": 25.0
+   },
+   "by_type": {
+    "price_drop": {
+     "detection_rate": 1.0,
+     "events": 88
+    },
+    "price_spike": {
+     "detection_rate": 0.9864864864864865,
+     "events": 74
+    },
+    "volume_spike": {
+     "detection_rate": 0.36363636363636365,
+     "events": 88
+    }
+   }
+  },
+  "lof": {
+   "metrics": {
+    "precision": 0.6159999999999999,
+    "recall": 0.6159999999999999,
+    "f1_score": 0.6159999999999999
+   },
+   "metrics_std": {
+    "precision": 0.1292439553712281,
+    "recall": 0.1292439553712281,
+    "f1_score": 0.1292439553712281
+   },
+   "confusion_matrix": {
+    "true_negatives": 465.4,
+    "false_positives": 9.6,
+    "false_negatives": 9.6,
+    "true_positives": 15.4
+   },
+   "summary": {
+    "total_anomalies_detect": 25.0,
+    "total_ground_truth": 25.0
+   },
+   "by_type": {
+    "price_drop": {
+     "detection_rate": 0.8863636363636364,
+     "events": 88
+    },
+    "price_spike": {
+     "detection_rate": 0.7297297297297297,
+     "events": 74
+    },
+    "volume_spike": {
+     "detection_rate": 0.25,
+     "events": 88
+    }
+   }
+  },
+  "ocsvm": {
+   "metrics": {
+    "precision": 0.30400000000000005,
+    "recall": 0.30400000000000005,
+    "f1_score": 0.30400000000000005
+   },
+   "metrics_std": {
+    "precision": 0.07418894796396563,
+    "recall": 0.07418894796396563,
+    "f1_score": 0.07418894796396563
+   },
+   "confusion_matrix": {
+    "true_negatives": 457.6,
+    "false_positives": 17.4,
+    "false_negatives": 17.4,
+    "true_positives": 7.6
+   },
+   "summary": {
+    "total_anomalies_detect": 25.0,
+    "total_ground_truth": 25.0
+   },
+   "by_type": {
+    "price_drop": {
+     "detection_rate": 0.32954545454545453,
+     "events": 88
+    },
+    "price_spike": {
+     "detection_rate": 0.2972972972972973,
+     "events": 74
+    },
+    "volume_spike": {
+     "detection_rate": 0.2840909090909091,
+     "events": 88
+    }
+   }
+  },
+  "autoencoder": {
+   "metrics": {
+    "precision": 0.6479999999999999,
+    "recall": 0.6479999999999999,
+    "f1_score": 0.6479999999999999
+   },
+   "metrics_std": {
+    "precision": 0.09086253353280437,
+    "recall": 0.09086253353280437,
+    "f1_score": 0.09086253353280437
+   },
+   "confusion_matrix": {
+    "true_negatives": 466.2,
+    "false_positives": 8.8,
+    "false_negatives": 8.8,
+    "true_positives": 16.2
+   },
+   "summary": {
+    "total_anomalies_detect": 25.0,
+    "total_ground_truth": 25.0
+   },
+   "by_type": {
+    "price_drop": {
+     "detection_rate": 1.0,
+     "events": 88
+    },
+    "price_spike": {
+     "detection_rate": 0.9459459459459459,
+     "events": 74
+    },
+    "volume_spike": {
+     "detection_rate": 0.045454545454545456,
+     "events": 88
+    }
+   }
+  },
+  "ensemble": {
+   "metrics": {
+    "precision": 0.652,
+    "recall": 0.652,
+    "f1_score": 0.652
+   },
+   "metrics_std": {
+    "precision": 0.09130169768410662,
+    "recall": 0.09130169768410662,
+    "f1_score": 0.09130169768410662
+   },
+   "confusion_matrix": {
+    "true_negatives": 466.3,
+    "false_positives": 8.7,
+    "false_negatives": 8.7,
+    "true_positives": 16.3
+   },
+   "summary": {
+    "total_anomalies_detect": 25.0,
+    "total_ground_truth": 25.0
+   },
+   "by_type": {
+    "price_drop": {
+     "detection_rate": 1.0,
+     "events": 88
+    },
+    "price_spike": {
+     "detection_rate": 0.9594594594594594,
+     "events": 74
+    },
+    "volume_spike": {
+     "detection_rate": 0.045454545454545456,
+     "events": 88
+    }
+   }
+  }
+ },
+ "metadata": {
+  "total_records": 500,
+  "scored_records": 500,
+  "injected_fraction": 0.05,
+  "n_runs": 10,
+  "mode": "batch",
+  "scenario": "basic"
+ },
+ "dataset": {
+  "symbol": "KO",
+  "period": "2y",
+  "fetched_at": "2026-10-06T18:51:25+00:00",
+  "first_date": "2024-10-07",
+  "last_date": "2026-10-05",
+  "sessions": 500
+ }
+}

@@ -5,7 +5,9 @@ Kroki:
   1. fetch    – jednorazowe pobranie notowań z API aplikacji i zamrożenie ich w plikach data/<SYMBOL>.json
   2. evaluate – ewaluacja na zamrożonych plikach w 4 wariantach (basic/extended × batch/walk_forward),
                 surowe odpowiedzi API zapisywane do results/<SYMBOL>_<scenario>_<mode>.json
-  3. summary  – zbiorcze tabele z wyników: results/summary.csv (wszystko) i results/summary.md (do pracy)
+  3. summary  – zbiorcze tabele z wyników: results/summary.csv (wszystko) i results/summary.md (do pracy),
+                w tym liczba spółek, na których model zespołowy wygrał z najlepszym pojedynczym modelem
+                (liczona z pliku summary.csv)
 
 Wymaga uruchomionego backendu (domyślnie http://localhost:8000).
 
@@ -21,6 +23,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import mean
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -46,7 +49,9 @@ def fetch(args: argparse.Namespace) -> None:
 
         response = requests.get(f"{args.api}/api/v1/market/data/{symbol}", params={"period": args.period}, timeout=60)
         response.raise_for_status()
-        records = response.json()["data"]
+        # Dzisiejsza sesja może jeszcze trwać (niepełna świeca) – do zamrożonych danych trafiają tylko zamknięte sesje
+        today = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
+        records = [r for r in response.json()["data"] if str(r["date"])[:10] < today]
 
         payload = {
             "symbol": symbol,
@@ -119,6 +124,41 @@ def _load_rows() -> list:
     return rows
 
 
+def _ensemble_wins(csv_path: Path) -> list:
+    """
+    Na ilu spółkach model zespołowy wygrał (średnie F1) z najlepszym pojedynczym modelem – liczone z summary.csv.
+    Dwa porównania:
+      - z najlepszym pojedynczym modelem na danej spółce (wybór „po fakcie”, najsurowszy),
+      - z modelem, który ma najwyższe średnie F1 po spółkach w danym wariancie (stały wybór, jak w praktyce).
+    """
+    with open(csv_path, newline="") as f:
+        rows = [{**row, "f1_score_mean": float(row["f1_score_mean"])} for row in csv.DictReader(f)]
+
+    singles = [m for m in MODELS if m != "ensemble"]
+    lines = ["## Model zespołowy vs najlepszy pojedynczy model (F1)", "",
+             "| Scenariusz | Tryb | vs najlepszy na danej spółce (wygrane / remisy / przegrane) "
+             "| Najlepszy pojedynczy średnio | vs ten model (wygrane / remisy / przegrane) |",
+             "|---|---|---|---|---|"]
+    for scenario in SCENARIOS:
+        for mode in MODES:
+            f1 = {(row["symbol"], row["model"]): row["f1_score_mean"]
+                  for row in rows if row["scenario"] == scenario and row["mode"] == mode}
+            symbols = sorted({s for s, m in f1 if m == "ensemble" and all((s, x) in f1 for x in singles)})
+            if not symbols:
+                continue
+
+            def tally(opponent_f1) -> str:
+                diffs = [round(f1[(s, "ensemble")] - opponent_f1(s), 6) for s in symbols]
+                return f"{sum(d > 0 for d in diffs)} / {sum(d == 0 for d in diffs)} / {sum(d < 0 for d in diffs)}"
+
+            best_avg = max(singles, key=lambda m: mean(f1[(s, m)] for s in symbols))
+            lines.append(f"| {scenario} | {mode} "
+                         f"| {tally(lambda s: max(f1[(s, m)] for m in singles))} "
+                         f"| {best_avg} | {tally(lambda s: f1[(s, best_avg)])} |")
+    lines += ["", f"Liczba spółek: {len({row['symbol'] for row in rows})}. Remis = identyczne średnie F1.", ""]
+    return lines
+
+
 def summary(_: argparse.Namespace) -> None:
     rows = _load_rows()
     if not rows:
@@ -156,7 +196,17 @@ def summary(_: argparse.Namespace) -> None:
     n_runs = rows[0]["n_runs"]
     lines += [f"Wartości w komórkach: F1 jako średnia ± odchylenie standardowe z {n_runs} przebiegów "
               "(różne losowania wstrzykniętych anomalii, te same dla wszystkich modeli). "
-              "Kolumny „Średnia” to średnia arytmetyczna po spółkach."]
+              "Kolumny „Średnia” to średnia arytmetyczna po spółkach.", ""]
+    lines += _ensemble_wins(RESULTS_DIR / "summary.csv")
+    lines += [
+        "## Uwagi metodologiczne", "",
+        "- **Tryb batch – precision ≈ recall ≈ F1.** Parametr contamination jest równy prawdziwemu udziałowi "
+        "wstrzykniętych anomalii, więc model oznacza dokładnie tyle sesji, ile anomalii wstrzyknięto: każdy fałszywy "
+        "alarm odpowiada jednej przeoczonej anomalii (FP = FN). To założenie optymistyczne – w praktyce udział "
+        "anomalii nie jest znany. W trybie walk-forward próg jest kalibrowany na przeszłości, stąd wartości się różnią.",
+        "- **Zaniżona precyzja.** Rzeczywiste anomalie obecne w notowaniach przed wstrzyknięciem nie mają etykiety, "
+        "więc ich wykrycie jest liczone jako fałszywy alarm. Podana precyzja jest zatem dolnym oszacowaniem.",
+    ]
     (RESULTS_DIR / "summary.md").write_text("\n".join(lines) + "\n")
     print(f"Zapisano {RESULTS_DIR / 'summary.csv'} i {RESULTS_DIR / 'summary.md'}")
 
@@ -168,7 +218,9 @@ def main() -> None:
 
     p_fetch = sub.add_parser("fetch", help="pobierz i zamroź notowania")
     p_fetch.add_argument("--symbols", nargs="+", default=DEFAULT_SYMBOLS)
-    p_fetch.add_argument("--period", default="1y")
+    # 2y (~500 sesji): przy 1y walk-forward ocenia ~190 sesji, czyli ~10 anomalii na przebieg –
+    # jedna trafiona/chybiona anomalia zmienia wtedy F1 o ~0,1
+    p_fetch.add_argument("--period", default="2y")
     p_fetch.add_argument("--force", action="store_true", help="nadpisz istniejące pliki danych")
     p_fetch.set_defaults(func=fetch)
 
