@@ -4,7 +4,7 @@ StockGuard AI to zaawansowana aplikacja webowa do monitorowania rynków finansow
 
 ## 🚀 Kluczowe Funkcje
 
-- **Monitorowanie w czasie rzeczywistym**: Pobieranie danych giełdowych bezpośrednio z `yfinance`.
+- **Pobieranie danych giełdowych bezpośrednio z `yfinance`**.
 - **Wykrywanie Anomalii (Wielomodelowe)**: Integracja wielu zaawansowanych modeli uczenia maszynowego (m.in. Isolation Forest, LOF, One-Class SVM, Autoencoder) w celu precyzyjnej identyfikacji nietypowych ruchów cenowych.
 - **Ewaluacja i Benchmarking Modeli**: Wbudowany moduł ewaluacji pozwalający na bieżąco oceniać i porównywać skuteczność poszczególnych modeli ML z użyciem dedykowanych endpointów.
 - **Wskaźniki Techniczne**: Automatyczne obliczanie m.in. RSI, MACD, Wstęg Bollingera, EMA oraz ATR.
