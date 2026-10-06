@@ -52,6 +52,11 @@ _LABELS = {
         "sentiment": "Sentyment", "recommendation": "Rekomendacja", "confidence": "Pewność",
         "table_section": "Ostatnie Notowania i Sygnały",
         "headers": ["Data", "Cena", "RSI", "Sygnał"],
+        "ai_disclaimer": "Rekomendacja wygenerowana automatycznie przez model AI – nie stanowi rekomendacji inwestycyjnej ani porady inwestycyjnej.",
+        "disclaimer_title": "Zastrzeżenie",
+        "disclaimer": (
+            "Wyniki prezentowane w raporcie (wykryte anomalie, wskaźniki techniczne oraz ocena i sugestie AI) mają charakter wyłącznie informacyjny i edukacyjny. Nie stanowią rekomendacji inwestycyjnej ani porady inwestycyjnej w rozumieniu przepisów o obrocie instrumentami finansowymi, w szczególności ustawy z dnia 29 lipca 2005 r. o obrocie instrumentami finansowymi oraz rozporządzenia (UE) nr 596/2014 (MAR). Decyzje inwestycyjne podejmujesz samodzielnie i na własne ryzyko."
+        ),
         "values": {
             "Bullish": "Byczy", "Bearish": "Niedźwiedzi", "Neutral": "Neutralny",
             "Buy": "Kupuj", "Sell": "Sprzedaj", "Hold": "Trzymaj",
@@ -66,6 +71,11 @@ _LABELS = {
         "sentiment": "Sentiment", "recommendation": "Recommendation", "confidence": "Confidence",
         "table_section": "Recent Data & Signals",
         "headers": ["Date", "Close", "RSI", "Signal"],
+        "ai_disclaimer": "Recommendation generated automatically by an AI model – it is not an investment recommendation or investment advice.",
+        "disclaimer_title": "Disclaimer",
+        "disclaimer": (
+            "The results shown in this report (detected anomalies, technical indicators and the AI assessment and suggestions) are for informational and educational purposes only. They do not constitute an investment recommendation or investment advice within the meaning of the regulations on trading in financial instruments, in particular the Polish Act of 29 July 2005 on Trading in Financial Instruments and Regulation (EU) No 596/2014 (MAR). You make investment decisions on your own and at your own risk."
+        ),
         "values": {},
     },
 }
@@ -158,6 +168,12 @@ class ExportService:
         line(8, f"{labels['confidence']}: {value_label(assessment.get('confidence'))}")
         pdf.set_text_color(0, 0, 0)
 
+        pdf.set_font(main_font, 'I', 8)
+        pdf.set_text_color(120, 120, 120)
+        pdf.multi_cell(0, 5, txt(labels["ai_disclaimer"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(2)
+
         pdf.set_font(main_font, 'I', 10)
         # Usunięcie znaczników Markdown (**pogrubienie**) z podsumowania LLM
         summary = (assessment.get('summary') or '').replace('**', '')
@@ -182,5 +198,20 @@ class ExportService:
             pdf.cell(col_width, 8, _fmt_number(row.get('rsi')), border=1)
             pdf.cell(col_width, 8, txt(value_label(row.get('signal') or 'Hold')), border=1)
             pdf.ln()
+
+        # Zastrzeżenie prawne na końcu raportu – w całości na jednej stronie
+        disclaimer = txt(labels["disclaimer"])
+        pdf.set_font(main_font, '', 8)
+        disclaimer_lines = len(pdf.multi_cell(0, 4.5, disclaimer, dry_run=True, output="LINES"))
+        if pdf.will_page_break(8 + 6 + disclaimer_lines * 4.5):
+            pdf.add_page()
+        else:
+            pdf.ln(8)
+        pdf.set_text_color(90, 90, 90)
+        pdf.set_font(main_font, 'B', 9)
+        line(6, labels["disclaimer_title"])
+        pdf.set_font(main_font, '', 8)
+        pdf.multi_cell(0, 4.5, disclaimer)
+        pdf.set_text_color(0, 0, 0)
 
         return bytes(pdf.output())

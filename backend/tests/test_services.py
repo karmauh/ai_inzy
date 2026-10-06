@@ -7,6 +7,7 @@ import requests
 
 from app.services.data_processor import DataProcessor
 from app.services.evaluation_service import EvaluationService
+from app.services import export_service
 from app.services.export_service import ExportService
 from app.services.llm_service import LLMService
 
@@ -92,6 +93,23 @@ def test_pdf_export_handles_missing_values(market_data, language):
     )
 
     assert pdf.startswith(b'%PDF')
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_pdf_export_contains_disclaimer(market_data, language, monkeypatch):
+    # Czcionka Helvetica + brak kompresji -> tekst w PDF jest czytelny wprost
+    class PlainFPDF(export_service.FPDF):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.set_compression(False)
+
+    monkeypatch.setattr(export_service, "_find_font", lambda _: None)
+    monkeypatch.setattr(export_service, "FPDF", PlainFPDF)
+
+    pdf = ExportService.generate_pdf(market_data, {"recommendation": "Buy", "summary": "x"}, {"symbol": "TEST"}, language)
+
+    assert b"596/2014" in pdf
+    assert b"Disclaimer" in pdf if language == "en" else b"Zastrze" in pdf
 
 
 # --- LLMService ---
