@@ -2,23 +2,23 @@
  "evaluation": {
   "isolation_forest": {
    "metrics": {
-    "precision": 0.24398038824975737,
-    "recall": 0.4,
-    "f1_score": 0.3018689357574401
+    "precision": 0.23374408045370676,
+    "recall": 0.3954545454545455,
+    "f1_score": 0.29352507222332175
    },
    "metrics_std": {
-    "precision": 0.0650603660635258,
-    "recall": 0.10123207932418223,
-    "f1_score": 0.07639733783894076
+    "precision": 0.06845569440281266,
+    "recall": 0.10956337084721773,
+    "f1_score": 0.08399047812906026
    },
    "confusion_matrix": {
-    "true_negatives": 390.2,
-    "false_positives": 27.8,
-    "false_negatives": 13.2,
-    "true_positives": 8.8
+    "true_negatives": 389.1,
+    "false_positives": 28.9,
+    "false_negatives": 13.3,
+    "true_positives": 8.7
    },
    "summary": {
-    "total_anomalies_detect": 36.6,
+    "total_anomalies_detect": 37.6,
     "total_ground_truth": 22.0
    },
    "by_type": {
@@ -31,7 +31,7 @@
      "events": 23
     },
     "price_drop": {
-     "detection_rate": 0.75,
+     "detection_rate": 0.6666666666666666,
      "events": 12
     },
     "price_spike": {
@@ -39,34 +39,34 @@
      "events": 10
     },
     "volatility_burst": {
-     "detection_rate": 0.9411764705882353,
+     "detection_rate": 0.8823529411764706,
      "events": 17
     },
     "volume_spike": {
-     "detection_rate": 0.26666666666666666,
+     "detection_rate": 0.3333333333333333,
      "events": 15
     }
    }
   },
   "lof": {
    "metrics": {
-    "precision": 0.2815708197540107,
-    "recall": 0.5863636363636363,
-    "f1_score": 0.3786168170440029
+    "precision": 0.2787403453364098,
+    "recall": 0.5863636363636364,
+    "f1_score": 0.3764158197017629
    },
    "metrics_std": {
-    "precision": 0.0953137904997195,
-    "recall": 0.19117946222557355,
-    "f1_score": 0.123930130131896
+    "precision": 0.09820067109234935,
+    "recall": 0.18232882836483255,
+    "f1_score": 0.1260272036067164
    },
    "confusion_matrix": {
-    "true_negatives": 384.2,
-    "false_positives": 33.8,
+    "true_negatives": 383.4,
+    "false_positives": 34.6,
     "false_negatives": 9.1,
     "true_positives": 12.9
    },
    "summary": {
-    "total_anomalies_detect": 46.7,
+    "total_anomalies_detect": 47.5,
     "total_ground_truth": 22.0
    },
    "by_type": {
@@ -75,11 +75,11 @@
      "events": 15
     },
     "gap_reversal": {
-     "detection_rate": 0.4782608695652174,
+     "detection_rate": 0.5217391304347826,
      "events": 23
     },
     "price_drop": {
-     "detection_rate": 0.8333333333333334,
+     "detection_rate": 0.75,
      "events": 12
     },
     "price_spike": {
@@ -98,28 +98,28 @@
   },
   "ocsvm": {
    "metrics": {
-    "precision": 0.24869701915854056,
-    "recall": 0.55,
-    "f1_score": 0.3419004085312165
+    "precision": 0.24844029368680723,
+    "recall": 0.5590909090909091,
+    "f1_score": 0.3433137991025392
    },
    "metrics_std": {
-    "precision": 0.09225323041164576,
-    "recall": 0.19439458891220995,
-    "f1_score": 0.12390654597086297
+    "precision": 0.08644047809842505,
+    "recall": 0.17843442205809568,
+    "f1_score": 0.1151342323074726
    },
    "confusion_matrix": {
-    "true_negatives": 380.9,
-    "false_positives": 37.1,
-    "false_negatives": 9.9,
-    "true_positives": 12.1
+    "true_negatives": 380.0,
+    "false_positives": 38.0,
+    "false_negatives": 9.7,
+    "true_positives": 12.3
    },
    "summary": {
-    "total_anomalies_detect": 49.2,
+    "total_anomalies_detect": 50.3,
     "total_ground_truth": 22.0
    },
    "by_type": {
     "drift": {
-     "detection_rate": 0.4,
+     "detection_rate": 0.6,
      "events": 15
     },
     "gap_reversal": {
@@ -146,23 +146,23 @@
   },
   "autoencoder": {
    "metrics": {
-    "precision": 0.27515780248415944,
-    "recall": 0.5181818181818182,
-    "f1_score": 0.3559592607740142
+    "precision": 0.25625315517661373,
+    "recall": 0.5363636363636364,
+    "f1_score": 0.3463815431179413
    },
    "metrics_std": {
-    "precision": 0.10957683280696083,
-    "recall": 0.21818181818181817,
-    "f1_score": 0.14033938979127758
+    "precision": 0.07382661482817843,
+    "recall": 0.15048132142951678,
+    "f1_score": 0.0983900945723267
    },
    "confusion_matrix": {
-    "true_negatives": 387.1,
-    "false_positives": 30.9,
-    "false_negatives": 10.6,
-    "true_positives": 11.4
+    "true_negatives": 383.6,
+    "false_positives": 34.4,
+    "false_negatives": 10.2,
+    "true_positives": 11.8
    },
    "summary": {
-    "total_anomalies_detect": 42.3,
+    "total_anomalies_detect": 46.2,
     "total_ground_truth": 22.0
    },
    "by_type": {
@@ -171,7 +171,7 @@
      "events": 15
     },
     "gap_reversal": {
-     "detection_rate": 0.6956521739130435,
+     "detection_rate": 0.5652173913043478,
      "events": 23
     },
     "price_drop": {
@@ -179,47 +179,47 @@
      "events": 12
     },
     "price_spike": {
-     "detection_rate": 1.0,
+     "detection_rate": 0.9,
      "events": 10
     },
     "volatility_burst": {
-     "detection_rate": 1.0,
+     "detection_rate": 0.9411764705882353,
      "events": 17
     },
     "volume_spike": {
-     "detection_rate": 0.7333333333333333,
+     "detection_rate": 0.5333333333333333,
      "events": 15
     }
    }
   },
   "ensemble": {
    "metrics": {
-    "precision": 0.2835357993199925,
-    "recall": 0.5636363636363637,
-    "f1_score": 0.37575044396277146
+    "precision": 0.2719310242944034,
+    "recall": 0.5818181818181818,
+    "f1_score": 0.3694914468119109
    },
    "metrics_std": {
-    "precision": 0.10894934930229039,
-    "recall": 0.19198829165402614,
-    "f1_score": 0.13591261784964323
+    "precision": 0.09442264857046333,
+    "recall": 0.17463066102089586,
+    "f1_score": 0.12139442193551757
    },
    "confusion_matrix": {
-    "true_negatives": 385.8,
-    "false_positives": 32.2,
-    "false_negatives": 9.6,
-    "true_positives": 12.4
+    "true_negatives": 382.6,
+    "false_positives": 35.4,
+    "false_negatives": 9.2,
+    "true_positives": 12.8
    },
    "summary": {
-    "total_anomalies_detect": 44.6,
+    "total_anomalies_detect": 48.2,
     "total_ground_truth": 22.0
    },
    "by_type": {
     "drift": {
-     "detection_rate": 0.4,
+     "detection_rate": 0.4666666666666667,
      "events": 15
     },
     "gap_reversal": {
-     "detection_rate": 0.5652173913043478,
+     "detection_rate": 0.5217391304347826,
      "events": 23
     },
     "price_drop": {
