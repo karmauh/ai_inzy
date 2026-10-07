@@ -51,11 +51,13 @@ EXPLANATION_TOP_FEATURES = 3
 # 'returns' to ta sama wartość co 'return_1d' – pomijamy duplikat w wyjaśnieniach
 EXPLANATION_EXCLUDED = {'returns'}
 
+# Bez 'returns' (= 'return_1d') i 'z_score_20' (bb_position = 0,5 + z_score_20 / 4) – zdublowana cecha
+# miałaby podwójną wagę w odległościach (LOF, OCSVM) i byłaby dwa razy częściej losowana w Isolation Forest
 FEATURES = [
-    'returns', 'volatility', 'rsi', 'atr',
+    'volatility', 'rsi', 'atr',
     'return_1d', 'return_3d', 'return_7d',
     'volume_change', 'volume_ratio',
-    'dist_to_ema20', 'bb_position', 'z_score_20', 'volatility_change',
+    'dist_to_ema20', 'bb_position', 'volatility_change',
     'momentum_5d', 'drawdown', 'body', 'upper_shadow', 'lower_shadow'
 ]
 
