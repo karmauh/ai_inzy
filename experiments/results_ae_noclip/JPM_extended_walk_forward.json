@@ -1,0 +1,260 @@
+{
+ "evaluation": {
+  "isolation_forest": {
+   "metrics": {
+    "precision": 0.31568752039932113,
+    "recall": 0.5136363636363637,
+    "f1_score": 0.3890912003661314
+   },
+   "metrics_std": {
+    "precision": 0.12548273882683142,
+    "recall": 0.2300287441614544,
+    "f1_score": 0.15965828408029603
+   },
+   "confusion_matrix": {
+    "true_negatives": 394.3,
+    "false_positives": 23.7,
+    "false_negatives": 10.7,
+    "true_positives": 11.3
+   },
+   "summary": {
+    "total_anomalies_detect": 35.0,
+    "total_ground_truth": 22.0
+   },
+   "by_type": {
+    "drift": {
+     "detection_rate": 0.4666666666666667,
+     "events": 15
+    },
+    "gap_reversal": {
+     "detection_rate": 0.391304347826087,
+     "events": 23
+    },
+    "price_drop": {
+     "detection_rate": 0.5833333333333334,
+     "events": 12
+    },
+    "price_spike": {
+     "detection_rate": 0.9,
+     "events": 10
+    },
+    "volatility_burst": {
+     "detection_rate": 0.8823529411764706,
+     "events": 17
+    },
+    "volume_spike": {
+     "detection_rate": 0.5333333333333333,
+     "events": 15
+    }
+   }
+  },
+  "lof": {
+   "metrics": {
+    "precision": 0.29556319770177625,
+    "recall": 0.5409090909090908,
+    "f1_score": 0.3817389920829106
+   },
+   "metrics_std": {
+    "precision": 0.10592140298655169,
+    "recall": 0.2240222096427565,
+    "f1_score": 0.14384401030762256
+   },
+   "confusion_matrix": {
+    "true_negatives": 390.6,
+    "false_positives": 27.4,
+    "false_negatives": 10.1,
+    "true_positives": 11.9
+   },
+   "summary": {
+    "total_anomalies_detect": 39.3,
+    "total_ground_truth": 22.0
+   },
+   "by_type": {
+    "drift": {
+     "detection_rate": 0.3333333333333333,
+     "events": 15
+    },
+    "gap_reversal": {
+     "detection_rate": 0.6956521739130435,
+     "events": 23
+    },
+    "price_drop": {
+     "detection_rate": 0.75,
+     "events": 12
+    },
+    "price_spike": {
+     "detection_rate": 0.9,
+     "events": 10
+    },
+    "volatility_burst": {
+     "detection_rate": 0.9411764705882353,
+     "events": 17
+    },
+    "volume_spike": {
+     "detection_rate": 0.8666666666666667,
+     "events": 15
+    }
+   }
+  },
+  "ocsvm": {
+   "metrics": {
+    "precision": 0.29445828399915747,
+    "recall": 0.5772727272727273,
+    "f1_score": 0.38967033218379193
+   },
+   "metrics_std": {
+    "precision": 0.10158531382006665,
+    "recall": 0.21613624414488622,
+    "f1_score": 0.13806462100229233
+   },
+   "confusion_matrix": {
+    "true_negatives": 388.2,
+    "false_positives": 29.8,
+    "false_negatives": 9.3,
+    "true_positives": 12.7
+   },
+   "summary": {
+    "total_anomalies_detect": 42.5,
+    "total_ground_truth": 22.0
+   },
+   "by_type": {
+    "drift": {
+     "detection_rate": 0.6,
+     "events": 15
+    },
+    "gap_reversal": {
+     "detection_rate": 0.4782608695652174,
+     "events": 23
+    },
+    "price_drop": {
+     "detection_rate": 0.6666666666666666,
+     "events": 12
+    },
+    "price_spike": {
+     "detection_rate": 0.9,
+     "events": 10
+    },
+    "volatility_burst": {
+     "detection_rate": 0.8823529411764706,
+     "events": 17
+    },
+    "volume_spike": {
+     "detection_rate": 0.8,
+     "events": 15
+    }
+   }
+  },
+  "autoencoder": {
+   "metrics": {
+    "precision": 0.27353879059042835,
+    "recall": 0.509090909090909,
+    "f1_score": 0.3545060424530801
+   },
+   "metrics_std": {
+    "precision": 0.08945466785521346,
+    "recall": 0.19687643479734285,
+    "f1_score": 0.12163608553179958
+   },
+   "confusion_matrix": {
+    "true_negatives": 388.6,
+    "false_positives": 29.4,
+    "false_negatives": 10.8,
+    "true_positives": 11.2
+   },
+   "summary": {
+    "total_anomalies_detect": 40.6,
+    "total_ground_truth": 22.0
+   },
+   "by_type": {
+    "drift": {
+     "detection_rate": 0.5333333333333333,
+     "events": 15
+    },
+    "gap_reversal": {
+     "detection_rate": 0.5652173913043478,
+     "events": 23
+    },
+    "price_drop": {
+     "detection_rate": 0.5,
+     "events": 12
+    },
+    "price_spike": {
+     "detection_rate": 0.7,
+     "events": 10
+    },
+    "volatility_burst": {
+     "detection_rate": 0.9411764705882353,
+     "events": 17
+    },
+    "volume_spike": {
+     "detection_rate": 0.6666666666666666,
+     "events": 15
+    }
+   }
+  },
+  "ensemble": {
+   "metrics": {
+    "precision": 0.31958242902514034,
+    "recall": 0.5818181818181818,
+    "f1_score": 0.4118240203708631
+   },
+   "metrics_std": {
+    "precision": 0.11244871183007579,
+    "recall": 0.22063020180930176,
+    "f1_score": 0.1478250913633822
+   },
+   "confusion_matrix": {
+    "true_negatives": 391.1,
+    "false_positives": 26.9,
+    "false_negatives": 9.2,
+    "true_positives": 12.8
+   },
+   "summary": {
+    "total_anomalies_detect": 39.7,
+    "total_ground_truth": 22.0
+   },
+   "by_type": {
+    "drift": {
+     "detection_rate": 0.4666666666666667,
+     "events": 15
+    },
+    "gap_reversal": {
+     "detection_rate": 0.5652173913043478,
+     "events": 23
+    },
+    "price_drop": {
+     "detection_rate": 0.5833333333333334,
+     "events": 12
+    },
+    "price_spike": {
+     "detection_rate": 0.9,
+     "events": 10
+    },
+    "volatility_burst": {
+     "detection_rate": 0.8823529411764706,
+     "events": 17
+    },
+    "volume_spike": {
+     "detection_rate": 0.8,
+     "events": 15
+    }
+   }
+  }
+ },
+ "metadata": {
+  "total_records": 500,
+  "scored_records": 440,
+  "injected_fraction": 0.05,
+  "n_runs": 10,
+  "mode": "walk_forward",
+  "scenario": "extended"
+ },
+ "dataset": {
+  "symbol": "JPM",
+  "period": "2y",
+  "fetched_at": "2026-10-06T18:51:25+00:00",
+  "first_date": "2024-10-07",
+  "last_date": "2026-10-05",
+  "sessions": 500
+ }
+}

@@ -9,6 +9,12 @@ Kroki:
                 w tym liczba spółek, na których model zespołowy wygrał z najlepszym pojedynczym modelem
                 (liczona z pliku summary.csv)
 
+Opcjonalnie:
+  compare    – porównanie dwóch katalogów wyników (badanie ablacyjne), np. bez przycinania danych uczących
+               autoenkodera: backend uruchomiony z AE_TRAIN_CLIP=1e9, potem
+               benchmark.py --results-dir results_ae_noclip evaluate / summary
+               benchmark.py compare --baseline results --variant results_ae_noclip
+
 Wymaga uruchomionego backendu (domyślnie http://localhost:8000).
 
 Przykład:
@@ -211,9 +217,36 @@ def summary(_: argparse.Namespace) -> None:
     print(f"Zapisano {RESULTS_DIR / 'summary.csv'} i {RESULTS_DIR / 'summary.md'}")
 
 
+def compare(args: argparse.Namespace) -> None:
+    """Średnie F1 (po spółkach) w dwóch katalogach wyników i różnica wariant − bazowy, dla każdego modelu i wariantu."""
+    def averages(directory: Path) -> dict:
+        with open(ROOT / directory / "summary.csv", newline="") as f:
+            rows = list(csv.DictReader(f))
+        keys = {(r["scenario"], r["mode"], r["model"]) for r in rows}
+        return {k: mean(float(r["f1_score_mean"]) for r in rows if (r["scenario"], r["mode"], r["model"]) == k) for k in keys}
+
+    base, variant = averages(args.baseline), averages(args.variant)
+    lines = [f"# Porównanie: {args.variant} vs {args.baseline}", "",
+             f"Średnie F1 po spółkach; Δ = {args.variant} − {args.baseline}.", "",
+             "| Scenariusz | Tryb | Model | " + f"{args.baseline} | {args.variant} | Δ |", "|---|---|---|---|---|---|"]
+    for scenario in SCENARIOS:
+        for mode in MODES:
+            for model in MODELS:
+                key = (scenario, mode, model)
+                if key in base and key in variant:
+                    lines.append(f"| {scenario} | {mode} | {model} | {base[key]:.3f} | {variant[key]:.3f} "
+                                 f"| {variant[key] - base[key]:+.3f} |")
+    out = ROOT / args.variant / "comparison.md"
+    out.write_text("\n".join(lines) + "\n")
+    print("\n".join(lines))
+    print(f"\nZapisano {out}")
+
+
 def main() -> None:
+    global RESULTS_DIR
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--api", default="http://localhost:8000", help="adres backendu")
+    parser.add_argument("--results-dir", default="results", help="katalog wyników (względem experiments/)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_fetch = sub.add_parser("fetch", help="pobierz i zamroź notowania")
@@ -232,7 +265,13 @@ def main() -> None:
 
     sub.add_parser("summary", help="zbuduj tabele zbiorcze").set_defaults(func=summary)
 
+    p_compare = sub.add_parser("compare", help="porównaj średnie F1 z dwóch katalogów wyników")
+    p_compare.add_argument("--baseline", default="results")
+    p_compare.add_argument("--variant", required=True)
+    p_compare.set_defaults(func=compare)
+
     args = parser.parse_args()
+    RESULTS_DIR = ROOT / args.results_dir
     args.func(args)
 
 
