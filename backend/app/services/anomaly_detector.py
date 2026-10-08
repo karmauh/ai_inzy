@@ -1,3 +1,4 @@
+import os
 import threading
 import pandas as pd
 import numpy as np
@@ -12,16 +13,16 @@ from typing import List, Dict, Any, Optional
 
 BASE_MODELS = ('isolation_forest', 'lof', 'ocsvm', 'autoencoder')
 # 'ensemble' – średnia odpornych z-score'ów wyników wszystkich modeli bazowych.
-# Wybrany eksperymentalnie (6 spółek x 5 przebiegów, 2 scenariusze x 2 tryby) spośród średniej/maksimum rang
-# i średniej z-score'ów dla różnych zestawów modeli: średnie F1 0.549 wobec 0.536 najlepszego pojedynczego modelu
-# (LOF), a w najtrudniejszym warunku (scenariusz rozszerzony, walk-forward) 0.325 wobec 0.298.
+# Wybrany eksperymentalnie spośród średniej/maksimum rang i średniej z-score'ów dla różnych zestawów modeli.
+# Aktualne wyniki porównania z modelami pojedynczymi: experiments/results/summary.md.
 SUPPORTED_MODELS = BASE_MODELS + ('ensemble',)
 ENSEMBLE_MEMBERS = BASE_MODELS
 
 # Autoenkoder uczy się na danych przyciętych do ±AE_TRAIN_CLIP (po skalowaniu odpornym na wartości skrajne).
 # Bez tego sieć uczy się odtwarzać także skrajne punkty, przez co anomalie dostają niski błąd rekonstrukcji.
-# Dobrane eksperymentalnie (6 spółek x 5 przebiegów): F1 0.50 -> 0.76 (batch), 0.51 -> 0.55 (walk-forward).
-AE_TRAIN_CLIP = 5.0
+# Badanie ablacyjne (bez przycinania): experiments/results_ae_noclip/comparison.md.
+# Zmienna środowiskowa AE_TRAIN_CLIP służy wyłącznie do eksperymentów (np. 1e9 = brak przycinania).
+AE_TRAIN_CLIP = float(os.getenv("AE_TRAIN_CLIP", "5.0"))
 
 # Inicjalizacja wag autoenkodera korzysta z globalnego RNG torcha – blokada zapewnia
 # powtarzalne wyniki, gdy detekcja działa równolegle w wielu wątkach (benchmark)
