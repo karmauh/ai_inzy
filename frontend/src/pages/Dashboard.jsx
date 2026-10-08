@@ -16,7 +16,7 @@ const ChartFallback = () => (
     <div className="h-[200px] flex items-center justify-center text-neutral-500 text-sm animate-pulse">…</div>
 );
 
-const DEFAULT_SETTINGS = { model: 'isolation_forest', period: '1y', contamination: 0.05, mode: 'batch' };
+const DEFAULT_SETTINGS = { model: 'lof', period: '1y', contamination: 0.05, mode: 'batch' };
 const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS);
 
 const Dashboard = () => {

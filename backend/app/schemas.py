@@ -14,7 +14,7 @@ DataPoints = List[Dict[str, Any]]
 
 class AnalyzeRequest(BaseModel):
     data: DataPoints = Field(min_length=MIN_DATA_POINTS)
-    model_type: ModelType = 'isolation_forest'
+    model_type: ModelType = 'lof'
     contamination: float = Field(default=0.05, gt=0, le=0.5)
     mode: DetectionMode = 'batch'
     ticker_info: Optional[Dict[str, Any]] = None

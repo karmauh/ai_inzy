@@ -39,7 +39,7 @@ export const exportPDF = async (data, assessment, tickerInfo, language) => {
     downloadFile(response, `analysis_report_${language}.pdf`);
 };
 
-export const analyzeData = async (data, modelType = 'isolation_forest', contamination = 0.05, tickerInfo = null, language = 'pl', mode = 'batch') => {
+export const analyzeData = async (data, modelType = 'lof', contamination = 0.05, tickerInfo = null, language = 'pl', mode = 'batch') => {
     const response = await client.post('/analyze', {
         data,
         model_type: modelType,
