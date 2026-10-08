@@ -1,6 +1,6 @@
 import { useLanguage } from '../context/LanguageContext';
+import { MODELS } from '../services/api';
 
-const MODELS = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder', 'ensemble'];
 const PERIODS = ['6mo', '1y', '2y', '5y'];
 const MODES = ['batch', 'walk_forward'];
 

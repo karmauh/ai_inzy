@@ -67,7 +67,10 @@ export const fetchMarketData = async (symbol, period = '1y') => {
     return response.data;
 };
 
-export const evaluateModelsAPI = async (data, fraction = 0.05, models = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder'], mode = 'batch', scenario = 'basic') => {
+// Wszystkie modele obsługiwane przez backend (ModelType w schemas.py), łącznie z modelem zespołowym
+export const MODELS = ['isolation_forest', 'lof', 'ocsvm', 'autoencoder', 'ensemble'];
+
+export const evaluateModelsAPI = async (data, fraction = 0.05, models = MODELS, mode = 'batch', scenario = 'basic') => {
     const response = await client.post('/evaluation/evaluate', {
         data,
         fraction,
