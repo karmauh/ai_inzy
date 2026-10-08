@@ -102,6 +102,21 @@ def test_signals_require_both_conditions_and_recent_dates(sample_data):
     assert results[0]['date'] == '2025-01-01'
 
 
+def test_signals_use_classic_rsi_thresholds(sample_data):
+    from app.services.anomaly_detector import RSI_OVERSOLD, RSI_OVERBOUGHT
+    assert (RSI_OVERSOLD, RSI_OVERBOUGHT) == (30, 70)
+
+    # Cena poza wstęgą we wszystkich czterech sesjach – o sygnale decyduje wyłącznie próg RSI
+    sample_data[-4].update({'rsi': 29, 'close': 50, 'bb_lower': 60})
+    sample_data[-3].update({'rsi': 31, 'close': 50, 'bb_lower': 60})
+    sample_data[-2].update({'rsi': 71, 'close': 200, 'bb_upper': 150})
+    sample_data[-1].update({'rsi': 69, 'close': 200, 'bb_upper': 150})
+
+    results = AnomalyDetector.detect_anomalies(sample_data, model_type="isolation_forest")
+
+    assert [r['signal'] for r in results[-4:]] == ['Buy', 'Hold', 'Sell', 'Hold']
+
+
 @pytest.mark.parametrize("model_type", ["isolation_forest", "lof", "ocsvm", "autoencoder", "ensemble"])
 @pytest.mark.parametrize("contamination", [0.01, 0.05, 0.2])
 def test_all_models_flag_the_same_fraction(market_data, model_type, contamination):

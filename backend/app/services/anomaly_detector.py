@@ -43,6 +43,9 @@ WALK_FORWARD_MIN_CALIBRATION = 20
 
 # Sygnały starsze niż tyle dni od ostatniej sesji są wygaszane do 'Hold'
 SIGNAL_LOOKBACK_DAYS = 60
+# Klasyczne progi RSI (Wilder, 1978): wyprzedanie < 30, wykupienie > 70
+RSI_OVERSOLD = 30
+RSI_OVERBOUGHT = 70
 
 # Wyjaśnienia anomalii: cechy porównywane z poprzednimi EXPLANATION_WINDOW sesjami (bez sesji ocenianej)
 EXPLANATION_WINDOW = 120
@@ -350,11 +353,11 @@ class AnomalyDetector:
         df['explanation'] = [explanations.get(i) for i in range(len(df))]
 
         # Sygnały transakcyjne (strategia konfluencji – oba warunki muszą być spełnione):
-        # Kupno: RSI < 32 ORAZ cena poniżej dolnej wstęgi Bollingera
-        # Sprzedaż: RSI > 68 ORAZ cena powyżej górnej wstęgi Bollingera
+        # Kupno: RSI < RSI_OVERSOLD ORAZ cena poniżej dolnej wstęgi Bollingera
+        # Sprzedaż: RSI > RSI_OVERBOUGHT ORAZ cena powyżej górnej wstęgi Bollingera
         df['signal'] = 'Hold'
-        df.loc[(df['rsi'] < 32) & (df['close'] < df['bb_lower']), 'signal'] = 'Buy'
-        df.loc[(df['rsi'] > 68) & (df['close'] > df['bb_upper']), 'signal'] = 'Sell'
+        df.loc[(df['rsi'] < RSI_OVERSOLD) & (df['close'] < df['bb_lower']), 'signal'] = 'Buy'
+        df.loc[(df['rsi'] > RSI_OVERBOUGHT) & (df['close'] > df['bb_upper']), 'signal'] = 'Sell'
 
         # Ograniczenie sygnałów do ostatnich SIGNAL_LOOKBACK_DAYS dni (sygnały historyczne nie są akcjonowalne)
         if 'date' in df.columns:
