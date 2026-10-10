@@ -25,10 +25,17 @@ export const LanguageProvider = ({ children }) => {
     }
   }, [language]);
 
+  // Atrybut lang ustawiany od razu przy zmianie języka (nie dopiero w useEffect po renderze), bo formatowanie
+  // liczb (np. w ModelBenchmark) odczytuje go podczas renderu – inaczej po przełączeniu zostałby stary format
+  const changeLanguage = (next) => {
+    document.documentElement.lang = next;
+    setLanguage(next);
+  };
+
   const t = (key) => translate(language, key);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: changeLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

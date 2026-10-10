@@ -51,7 +51,7 @@ export const translations = {
       insights: {
         title: "Podsumowanie wyników",
         mainStart: "Według wybranej miary",
-        mainMiddle: " najlepszy wynik uzyskał model",
+        mainMiddle: " najlepszy wynik uzyskał",
         mainValue: "– wartość",
         mainEnd: "dla analizowanego instrumentu.",
         precisionWinner: "Najwyższa precyzja (najmniej fałszywych alarmów):",

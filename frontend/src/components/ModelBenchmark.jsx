@@ -3,7 +3,10 @@ import { BarChart, Bar, ErrorBar, Radar, RadarChart, PolarGrid, PolarAngleAxis, 
 import { exportCSV } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 
-const formatPercent = (val) => `${(val * 100).toFixed(1)}%`;
+const numberLocale = () => (document.documentElement.lang === 'en' ? 'en-US' : 'pl-PL');
+const formatNumber = (val, digits) =>
+    val.toLocaleString(numberLocale(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const formatPercent = (val) => `${formatNumber(val * 100, 1)}%`;
 
 // Precision: teal, Recall: amber, F1: fiolet – każda metryka musi być odróżnialna na wykresie
 const F1_COLOR = '#a78bfa';
@@ -11,7 +14,7 @@ const F1_COLOR = '#a78bfa';
 // Wartość z odchyleniem standardowym z wielu przebiegów ewaluacji, np. "74.9% ± 6.3%"
 const formatWithStd = (val, std) => (std ? `${formatPercent(val)} ± ${formatPercent(std)}` : formatPercent(val));
 // Macierz pomyłek to średnia na przebieg – liczby niecałkowite z jednym miejscem po przecinku
-const formatCount = (val) => (Number.isInteger(val) ? `${val}` : val.toFixed(1));
+const formatCount = (val) => (Number.isInteger(val) ? `${val}` : formatNumber(val, 1));
 
 // Kolejność kolumn w tabeli wykrywalności (pokazywane są tylko typy obecne w wynikach)
 const ANOMALY_TYPES = ['price_spike', 'price_drop', 'volume_spike', 'gap_reversal', 'drift', 'volatility_burst'];
@@ -93,9 +96,9 @@ const CustomTooltip = ({ active, payload, label, t }) => {
                 <div className="space-y-3">
                     {payload.map((entry, index) => {
                         let descKey = 'benchmark.metrics.defaultDesc';
-                        if (entry.name === 'Precision') descKey = 'benchmark.metrics.precisionDesc';
-                        if (entry.name === 'Recall') descKey = 'benchmark.metrics.recallDesc';
-                        if (entry.name === 'F1 Score') descKey = 'benchmark.metrics.f1Desc';
+                        if (entry.dataKey === 'precision') descKey = 'benchmark.metrics.precisionDesc';
+                        if (entry.dataKey === 'recall') descKey = 'benchmark.metrics.recallDesc';
+                        if (entry.dataKey === 'f1_score') descKey = 'benchmark.metrics.f1Desc';
 
                         return (
                             <div key={index} className="flex flex-col">
@@ -252,7 +255,6 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, scenario, onScen
             <div className="bg-neutral-700/50 p-5 rounded-xl border border-primary-500/30 mb-8 mx-auto xl:w-[90%] shadow-inner transition-all flex flex-col gap-4 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-primary-500 rounded-l-xl opacity-60"></div>
                 <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xl">💡</span>
                     <h3 className="text-white font-bold text-lg">{t('benchmark.insights.title')}</h3>
                 </div>
 
@@ -324,13 +326,13 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, scenario, onScen
                                 <YAxis stroke="#9ca3af" tickFormatter={formatPercent} tickLine={false} axisLine={{ stroke: '#4b5563' }} domain={[0, 1]} />
                                 <Tooltip content={<CustomTooltip t={t} />} cursor={{ fill: '#374151', opacity: 0.2 }} />
                                 <Legend wrapperStyle={{ color: '#9ca3af', paddingTop: '20px' }} iconType="circle" />
-                                <Bar dataKey="precision" name="Precision" fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={30}>
+                                <Bar dataKey="precision" name={t('benchmark.header.metricPrecision')} fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={30}>
                                     <ErrorBar dataKey="precision_std" stroke="#e5e7eb" strokeWidth={1.5} width={6} />
                                 </Bar>
-                                <Bar dataKey="recall" name="Recall" fill="#fbbf24" radius={[6, 6, 0, 0]} barSize={30}>
+                                <Bar dataKey="recall" name={t('benchmark.header.metricRecall')} fill="#fbbf24" radius={[6, 6, 0, 0]} barSize={30}>
                                     <ErrorBar dataKey="recall_std" stroke="#e5e7eb" strokeWidth={1.5} width={6} />
                                 </Bar>
-                                <Bar dataKey="f1_score" name="F1 Score" fill={F1_COLOR} radius={[6, 6, 0, 0]} barSize={30}>
+                                <Bar dataKey="f1_score" name={t('benchmark.header.metricF1')} fill={F1_COLOR} radius={[6, 6, 0, 0]} barSize={30}>
                                     <ErrorBar dataKey="f1_score_std" stroke="#e5e7eb" strokeWidth={1.5} width={6} />
                                 </Bar>
                             </BarChart>
@@ -339,9 +341,9 @@ const ModelBenchmark = ({ evaluationData, nRuns, detectionMode, scenario, onScen
                                 <PolarGrid stroke="#374151" opacity={0.3} />
                                 <PolarAngleAxis dataKey="name" tick={{ fill: '#e5e7eb', fontWeight: 600 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 1]} tickFormatter={formatPercent} tick={{ fill: '#9ca3af' }} />
-                                <Radar name="Precision" dataKey="precision" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.3} />
-                                <Radar name="Recall" dataKey="recall" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.3} />
-                                <Radar name="F1 Score" dataKey="f1_score" stroke={F1_COLOR} fill={F1_COLOR} fillOpacity={0.3} />
+                                <Radar name={t('benchmark.header.metricPrecision')} dataKey="precision" stroke="#14b8a6" fill="#14b8a6" fillOpacity={0.3} />
+                                <Radar name={t('benchmark.header.metricRecall')} dataKey="recall" stroke="#fbbf24" fill="#fbbf24" fillOpacity={0.3} />
+                                <Radar name={t('benchmark.header.metricF1')} dataKey="f1_score" stroke={F1_COLOR} fill={F1_COLOR} fillOpacity={0.3} />
                                 <Legend wrapperStyle={{ color: '#9ca3af', paddingTop: '20px' }} iconType="circle" />
                                 <Tooltip content={<CustomTooltip t={t} />} />
                             </RadarChart>
