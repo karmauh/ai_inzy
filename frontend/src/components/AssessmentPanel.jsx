@@ -35,7 +35,7 @@ const AssessmentPanel = ({ assessment }) => {
         <div className="bg-neutral-800 rounded-xl shadow-2xl overflow-hidden border border-neutral-700 transition-all hover:border-primary-500/50">
             <div className="bg-neutral-700 p-4 border-b border-neutral-600 flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span className="text-primary-400">📊</span> {t('assessment.title')}
+                    {t('assessment.title')}
                 </h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-6">
@@ -65,7 +65,7 @@ const AssessmentPanel = ({ assessment }) => {
             </div>
 
             <p className="px-6 py-3 border-t border-neutral-700 text-xs text-amber-300/80 leading-relaxed">
-                ⚠️ {t('assessment.disclaimer')}
+                {t('assessment.disclaimer')}
             </p>
         </div>
     );

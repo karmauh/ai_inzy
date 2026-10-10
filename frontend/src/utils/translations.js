@@ -175,7 +175,7 @@ export const translations = {
       recommendation: "Rekomendacja",
       confidence: "Pewność",
       summary: "Podsumowanie analizy",
-      disclaimer: "Rekomendacja wygenerowana automatycznie przez model AI – nie stanowi rekomendacji inwestycyjnej ani porady inwestycyjnej.",
+      disclaimer: "Ocena wygenerowana automatycznie przez model językowy. Nie stanowi rekomendacji inwestycyjnej ani porady inwestycyjnej.",
       values: {
         Bullish: "Byczy",
         Bearish: "Niedźwiedzi",
@@ -398,7 +398,7 @@ export const translations = {
       recommendation: "Recommendation",
       confidence: "Confidence",
       summary: "Analysis summary",
-      disclaimer: "Recommendation generated automatically by an AI model – it is not an investment recommendation or investment advice.",
+      disclaimer: "Assessment generated automatically by a language model. It is not an investment recommendation or investment advice.",
       values: {
         Bullish: "Bullish",
         Bearish: "Bearish",

@@ -203,6 +203,7 @@ class LLMService:
         )
         lang_instruction = "angielskim" if language == "en" else "polskim"
         recommendation_words = "Buy / Hold / Sell" if language == "en" else "Kupuj / Trzymaj / Sprzedaj"
+        decimal_example = "10.7%" if language == "en" else "10,7%"
         is_anomaly = last_point.get('is_anomaly', False)
         context = build_market_context(results, analysis)
 
@@ -222,6 +223,7 @@ Zasady:
 - Zacznij od razu od treści analizy – bez wstępów typu „Oto analiza…” i bez tytułów.
 - Używaj prostego języka, ale z poprawną terminologią techniczną.
 - Nie podawaj konkretnych cen docelowych ani gwarancji wyniku.
+- Liczby dziesiętne zapisuj zgodnie z zasadami języka odpowiedzi (np. {decimal_example}).
 - Jeśli dane są sprzeczne lub niejednoznaczne, wyraźnie to zaznacz i wybierz bardziej zachowawczą rekomendację.
 - Jeśli brakuje jakiegoś wskaźnika, powiedz „brak danych” zamiast zgadywać.
 - Anomalia oznacza nietypowe zachowanie, a nie automatycznie sygnał kupna czy sprzedaży – nie nadinterpretuj jej.
