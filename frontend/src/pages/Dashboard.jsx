@@ -88,7 +88,7 @@ const Dashboard = () => {
 
     const handleExportPDF = () => {
         if (analysisResults && assessment && tickerInfo) {
-            handleExport(() => exportPDF(analysisResults, assessment, tickerInfo, language));
+            handleExport(() => exportPDF(analysisResults, assessment, tickerInfo, language, settings));
         }
     };
 
@@ -241,13 +241,13 @@ const Dashboard = () => {
                                         onClick={handleExportPDF}
                                         className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/50 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 group shadow-sm"
                                     >
-                                        <span className="text-lg group-hover:scale-110 transition-transform">📄</span> {t('dashboard.exportPDF')}
+                                        {t('dashboard.exportPDF')}
                                     </button>
                                     <button
                                         onClick={handleExportCSV}
                                         className="w-full bg-primary-600/20 hover:bg-primary-600/30 text-primary-400 border border-primary-600/50 font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 group shadow-sm"
                                     >
-                                        <span className="text-lg group-hover:scale-110 transition-transform">📊</span> {t('dashboard.exportCSV')}
+                                        {t('dashboard.exportCSV')}
                                     </button>
                                 </div>
                             </div>

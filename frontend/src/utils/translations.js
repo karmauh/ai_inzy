@@ -177,8 +177,8 @@ export const translations = {
       summary: "Podsumowanie analizy",
       disclaimer: "Ocena wygenerowana automatycznie przez model językowy. Nie stanowi rekomendacji inwestycyjnej ani porady inwestycyjnej.",
       values: {
-        Bullish: "Byczy",
-        Bearish: "Niedźwiedzi",
+        Bullish: "Wzrostowy",
+        Bearish: "Spadkowy",
         Neutral: "Neutralny",
         Buy: "Kupuj",
         Sell: "Sprzedaj",

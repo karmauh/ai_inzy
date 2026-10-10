@@ -95,9 +95,9 @@ def test_pdf_export_handles_missing_values(market_data, language):
     assert pdf.startswith(b'%PDF')
 
 
-@pytest.mark.parametrize("language", ["pl", "en"])
-def test_pdf_export_contains_disclaimer(market_data, language, monkeypatch):
-    # Czcionka Helvetica + brak kompresji -> tekst w PDF jest czytelny wprost
+@pytest.fixture
+def plain_pdf(monkeypatch):
+    # Czcionka Helvetica + brak kompresji -> tekst w PDF jest czytelny wprost (znaki spoza Latin-1 zamieniane na '?')
     class PlainFPDF(export_service.FPDF):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -106,10 +106,59 @@ def test_pdf_export_contains_disclaimer(market_data, language, monkeypatch):
     monkeypatch.setattr(export_service, "_find_font", lambda _: None)
     monkeypatch.setattr(export_service, "FPDF", PlainFPDF)
 
+
+def _pdf_text(pdf: bytes) -> str:
+    # Nieskompresowany PDF z czcionką Helvetica: tekst w Latin-1, nawiasy escapowane jako \( i \)
+    return pdf.decode("latin-1").replace("\\(", "(").replace("\\)", ")")
+
+
+def _report_rows():
+    rows = [{"date": f"2026-09-{i:02d}", "close": 1234.5 + i, "rsi": 55.25, "anomaly_score": 0.1,
+             "is_anomaly": False, "signal": "Hold", "explanation": None} for i in range(1, 21)]
+    rows[-2].update({"is_anomaly": True, "anomaly_score": 2.3963, "signal": "Sell",
+                     "explanation": [{"feature": "volume_ratio", "value": 3.9, "typical": 1.0, "z": 8.7}]})
+    return rows
+
+
+@pytest.mark.parametrize("language", ["pl", "en"])
+def test_pdf_export_contains_disclaimer(market_data, language, plain_pdf):
     pdf = ExportService.generate_pdf(market_data, {"recommendation": "Buy", "summary": "x"}, {"symbol": "TEST"}, language)
 
     assert b"596/2014" in pdf
     assert b"Disclaimer" in pdf if language == "en" else b"Zastrze" in pdf
+
+
+def test_pdf_report_sections_use_polish_number_format(plain_pdf):
+    text = _pdf_text(ExportService.generate_pdf(_report_rows(), {"sentiment": "Bullish", "summary": "x"}, {"symbol": "TEST"}, "pl",
+                                                {"model_type": "lof", "mode": "walk_forward", "contamination": 0.05}))
+
+    assert "Parametry analizy" in text and "Wykryte anomalie" in text and "Ostatnie notowania" in text
+    assert "Model: Local Outlier Factor" in text and "(20 sesji)" in text and ": 5% sesji" in text
+    assert "Wzrostowy" in text
+    assert "1253,50" in text and "2,3963" in text and "55,25" in text
+    assert "Wolumen vs ?rednia 20 sesji: 3,9" in text
+    assert "1253.50" not in text
+    # Sygnał pokazywany tylko tam, gdzie wystąpił; sesje bez sygnału nie dostają „Trzymaj”
+    assert "Sprzedaj" in text and "Trzymaj" not in text
+
+
+def test_pdf_report_uses_english_number_format(plain_pdf):
+    text = _pdf_text(ExportService.generate_pdf(_report_rows(), {"summary": "x"}, {"symbol": "TEST"}, "en",
+                                                {"model_type": "ensemble", "mode": "batch", "contamination": 0.05}))
+
+    assert "Ensemble (all models)" in text and "Historical analysis" in text
+    assert "1,253.50" in text and "2.3963" in text
+    assert "Volume vs 20-session average: 3.9" in text
+
+
+def test_report_number_formatting_matches_app_locales():
+    from app.services.export_service import _fmt_decimal, _sessions
+    assert _fmt_decimal(1234.5, 2, "pl") == "1234,50"
+    assert _fmt_decimal(12345.5, 1, "pl") == "12\u00a0345,5"
+    assert _fmt_decimal(-0.5, 1, "pl") == "-0,5"
+    assert _fmt_decimal(12345.5, 1, "en") == "12,345.5"
+    assert [_sessions(n, ("sesja", "sesje", "sesji")) for n in (1, 3, 12, 22, 25)] == \
+        ["1 sesja", "3 sesje", "12 sesji", "22 sesje", "25 sesji"]
 
 
 # --- LLMService ---

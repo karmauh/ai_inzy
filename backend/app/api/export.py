@@ -25,7 +25,8 @@ def export_pdf(request: ExportPdfRequest):
     """
     Eksportuje kompleksowy raport do pliku PDF.
     """
-    pdf_content = ExportService.generate_pdf(request.data, request.assessment, request.ticker_info, request.language)
+    analysis = {"model_type": request.model_type, "mode": request.mode, "contamination": request.contamination}
+    pdf_content = ExportService.generate_pdf(request.data, request.assessment, request.ticker_info, request.language, analysis)
 
     return Response(
         content=pdf_content,

@@ -50,3 +50,6 @@ class ExportPdfRequest(BaseModel):
     assessment: Dict[str, Any] = Field(default_factory=dict)
     ticker_info: Dict[str, Any] = Field(default_factory=dict)
     language: Language = 'pl'
+    model_type: Optional[ModelType] = None
+    mode: Optional[DetectionMode] = None
+    contamination: Optional[float] = Field(default=None, gt=0, le=0.5)

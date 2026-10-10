@@ -27,12 +27,13 @@ export const exportCSV = async (data, filename = 'stock_data.csv') => {
     downloadFile(response, filename);
 };
 
-export const exportPDF = async (data, assessment, tickerInfo, language) => {
+export const exportPDF = async (data, assessment, tickerInfo, language, settings = null) => {
     const response = await client.post('/export/pdf', {
         data,
         assessment,
         ticker_info: tickerInfo,
-        language
+        language,
+        ...(settings && { model_type: settings.model, mode: settings.mode, contamination: settings.contamination })
     }, {
         responseType: 'blob'
     });
