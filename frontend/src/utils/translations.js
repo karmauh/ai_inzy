@@ -166,6 +166,8 @@ export const translations = {
       volatilityTitle: "Zmienność (ATR i odch. std.)",
       bbUpper: "Górna wstęga",
       bbLower: "Dolna wstęga",
+      bbBands: "Wstęgi Bollingera (20, 2)",
+      stdDev: "Odch. std. ceny (20)",
     },
     assessment: {
       title: "Ocena modelu językowego",
@@ -387,6 +389,8 @@ export const translations = {
       volatilityTitle: "Volatility (ATR & StdDev)",
       bbUpper: "BB Upper",
       bbLower: "BB Lower",
+      bbBands: "Bollinger Bands (20, 2)",
+      stdDev: "Price StdDev (20)",
     },
     assessment: {
       title: "Language model assessment",

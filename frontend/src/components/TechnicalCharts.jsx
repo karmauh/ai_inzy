@@ -5,6 +5,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   ReferenceLine,
   Area,
@@ -55,6 +56,7 @@ const TechnicalCharts = ({ data }) => {
               <ReferenceLine y={0} stroke="#6b7280" />
               <Line type="monotone" dataKey="macd" stroke="#14b8a6" dot={false} strokeWidth={2} name="MACD" />
               <Line type="monotone" dataKey="macd_signal" stroke="#fbbf24" dot={false} strokeWidth={2} name={t('charts.signalLine')} />
+              <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -74,13 +76,30 @@ const TechnicalCharts = ({ data }) => {
                  labelStyle={{ color: '#9ca3af' }}
                  formatter={(value) => value?.toFixed(2)}
               />
-              <Area type="monotone" dataKey="bb_upper" stroke="none" fill="#14b8a6" fillOpacity={0.1} />
-              <Area type="monotone" dataKey="bb_lower" stroke="none" fill="#14b8a6" fillOpacity={0.1} />
+              <Area
+                type="monotone"
+                dataKey={(d) => (d.bb_lower != null && d.bb_upper != null ? [d.bb_lower, d.bb_upper] : null)}
+                stroke="none"
+                fill="#14b8a6"
+                fillOpacity={0.12}
+                legendType="none"
+                tooltipType="none"
+                isAnimationActive={false}
+              />
               <Line type="monotone" dataKey="close" stroke="#ffffff" dot={false} strokeWidth={1} name={t('charts.price')} />
               <Line type="monotone" dataKey="ema_20" stroke="#fbbf24" dot={false} strokeWidth={1} name="EMA 20" />
               <Line type="monotone" dataKey="ema_50" stroke="#f472b6" dot={false} strokeWidth={1} name="EMA 50" />
               <Line type="monotone" dataKey="bb_upper" stroke="#14b8a6" dot={false} strokeWidth={1} strokeDasharray="2 2" name={t('charts.bbUpper')} />
               <Line type="monotone" dataKey="bb_lower" stroke="#14b8a6" dot={false} strokeWidth={1} strokeDasharray="2 2" name={t('charts.bbLower')} />
+              <Legend
+                wrapperStyle={{ fontSize: 12, color: '#9ca3af' }}
+                payload={[
+                  { value: t('charts.price'), type: 'line', color: '#ffffff' },
+                  { value: 'EMA 20', type: 'line', color: '#fbbf24' },
+                  { value: 'EMA 50', type: 'line', color: '#f472b6' },
+                  { value: t('charts.bbBands'), type: 'line', color: '#14b8a6' }
+                ]}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -100,7 +119,8 @@ const TechnicalCharts = ({ data }) => {
                  labelStyle={{ color: '#9ca3af' }}
               />
               <Line type="monotone" dataKey="atr" stroke="#ec4899" dot={false} strokeWidth={2} name="ATR (14)" />
-              <Line type="monotone" dataKey="volatility" stroke="#9ca3af" dot={false} strokeWidth={1} strokeDasharray="3 3" name="StdDev (20)" />
+              <Line type="monotone" dataKey="volatility" stroke="#9ca3af" dot={false} strokeWidth={1} strokeDasharray="3 3" name={t('charts.stdDev')} />
+              <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
