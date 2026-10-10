@@ -202,7 +202,7 @@ export const translations = {
       body: "Korpus świecy (% ceny)",
       upper_shadow: "Górny cień świecy (% ceny)",
       lower_shadow: "Dolny cień świecy (% ceny)",
-      volume_ratio: "Wolumen vs średnia 20 sesji",
+      volume_ratio: "Wolumen względem średniej z 20 sesji",
       rsi: "RSI",
       z_score_20: "Odchylenie od SMA 20 (σ)",
       bb_position: "Pozycja we wstęgach Bollingera"

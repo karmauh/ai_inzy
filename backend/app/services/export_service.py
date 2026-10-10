@@ -86,7 +86,7 @@ _LABELS = {
             "volume_change": "Zmiana wolumenu (d/d)", "volatility_change": "Zmiana zmienności (d/d)",
             "volatility": "Zmienność 20 sesji (% ceny)", "atr": "ATR (% ceny)", "body": "Korpus świecy (% ceny)",
             "upper_shadow": "Górny cień świecy (% ceny)", "lower_shadow": "Dolny cień świecy (% ceny)",
-            "volume_ratio": "Wolumen vs średnia 20 sesji", "rsi": "RSI", "z_score_20": "Odchylenie od SMA 20 (σ)",
+            "volume_ratio": "Wolumen względem średniej z 20 sesji", "rsi": "RSI", "z_score_20": "Odchylenie od SMA 20 (σ)",
             "bb_position": "Pozycja we wstęgach Bollingera",
         },
     },
@@ -192,7 +192,7 @@ def _fmt_feature_value(feature: str, value: float, language: str) -> str:
 
 
 def _describe_explanation(explanation: Any, labels: Dict[str, Any], language: str) -> str:
-    """Cechy najbardziej odbiegające od normy w zapisie z aplikacji, np. '▲ Wolumen vs średnia 20 sesji: 4,0× (typowo 1,0×)'."""
+    """Cechy najbardziej odbiegające od normy w zapisie z aplikacji, np. '▲ Wolumen względem średniej z 20 sesji: 4,0× (typowo 1,0×)'."""
     if not isinstance(explanation, list):
         return "—"
     lines = []
@@ -326,7 +326,10 @@ class ExportService:
         summary = (assessment.get('summary') or '').replace('**', '')
         pdf.multi_cell(0, 6, txt(summary), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-        # 3. Wykryte anomalie
+        # 3. Wykryte anomalie – nagłówek nie może zostać sam na dole strony (60 mm: nagłówek, dwa zdania,
+        # wiersz nagłówka tabeli i pierwszy wiersz anomalii)
+        if pdf.will_page_break(60):
+            pdf.add_page()
         section(labels["anomalies_section"])
         anomalies = [r for r in data if r.get('is_anomaly')]
         # W trybie walk-forward sesje z okresu rozruchu nie są oceniane (anomaly_score = None)
@@ -345,13 +348,17 @@ class ExportService:
         else:
             line(6, labels["anomalies_none"])
 
-        # 4. Ostatnie notowania – sygnał tylko wtedy, gdy rzeczywiście wystąpił
+        # 4. Ostatnie notowania – sygnał tylko wtedy, gdy rzeczywiście wystąpił.
+        # Tabela nie jest dzielona między strony: nagłówek sekcji (~13 mm) + wiersze po ~6,1 mm (4,5 mm tekstu + odstępy)
+        recent = data[-REPORT_RECENT_SESSIONS:]
+        if pdf.will_page_break(13 + (len(recent) + 1) * 6.1):
+            pdf.add_page()
         section(labels["table_section"])
         table(labels["headers"],
               [[_date(r), _fmt_number(r.get('close'), 2, language), _fmt_number(r.get('rsi'), 2, language),
                 labels["yes"] if r.get('is_anomaly') else "—",
                 value_label(r.get('signal')) if r.get('signal') in ('Buy', 'Sell') else "—"]
-               for r in data[-REPORT_RECENT_SESSIONS:]],
+               for r in recent],
               col_widths=(38, 38, 38, 38, 38), align=("LEFT", "RIGHT", "RIGHT", "CENTER", "CENTER"), padding=(0.8, 1.5))
 
         # Zastrzeżenie prawne na końcu raportu – w całości na jednej stronie

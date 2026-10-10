@@ -68,7 +68,7 @@ _FEATURE_LABELS = {
     'volume_change': ('zmiana wolumenu d/d', 'pct'), 'volatility_change': ('zmiana zmienności d/d', 'pct'),
     'volatility': ('zmienność 20 sesji (% ceny)', 'pct'), 'atr': ('ATR (% ceny)', 'pct'),
     'body': ('korpus świecy (% ceny)', 'pct'), 'upper_shadow': ('górny cień świecy (% ceny)', 'pct'),
-    'lower_shadow': ('dolny cień świecy (% ceny)', 'pct'), 'volume_ratio': ('wolumen vs średnia 20 sesji', 'ratio'),
+    'lower_shadow': ('dolny cień świecy (% ceny)', 'pct'), 'volume_ratio': ('wolumen względem średniej z 20 sesji', 'ratio'),
     'rsi': ('RSI', 'num'), 'z_score_20': ('odchylenie od SMA20 w sigmach', 'num'),
     'bb_position': ('pozycja we wstęgach Bollingera (0 = dolna, 1 = górna)', 'num'),
 }

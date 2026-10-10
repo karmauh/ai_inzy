@@ -136,7 +136,7 @@ def test_pdf_report_sections_use_polish_number_format(plain_pdf):
     assert "Model: Local Outlier Factor" in text and "(20 sesji)" in text and ": 5% sesji" in text
     assert "Wzrostowy" in text
     assert "1253,50" in text and "2,3963" in text and "55,25" in text
-    assert "Wolumen vs ?rednia 20 sesji: 3,9" in text
+    assert "Wolumen wzgl?dem ?redniej z 20 sesji: 3,9" in text
     assert "1253.50" not in text
     # Sygnał pokazywany tylko tam, gdzie wystąpił; sesje bez sygnału nie dostają „Trzymaj”
     assert "Sprzedaj" in text and "Trzymaj" not in text
@@ -387,7 +387,7 @@ def test_market_context_describes_trend_and_recent_anomalies(market_data):
     assert f"20 sesji {(closes[-1] / closes[-21] - 1) * 100:+.1f}%" in context
     assert "Anomalie w ostatnich 30 sesjach: 2 (przy tej czułości oczekiwane ok. 1.5); w całym okresie: 3." in context
     assert "Ostatnia anomalia: 4 sesji temu." in context
-    assert "wolumen vs średnia 20 sesji 4.0x (typowo 1.0x)" in context
+    assert "wolumen względem średniej z 20 sesji 4.0x (typowo 1.0x)" in context
     assert "Local Outlier Factor" in context and "bez wglądu w przyszłość" in context
     # Najnowsza anomalia jest opisana jako pierwsza, a anomalia sprzed >60 sesji nie jest opisywana
     assert context.index(rows[245]['date']) < context.index(rows[230]['date'])
